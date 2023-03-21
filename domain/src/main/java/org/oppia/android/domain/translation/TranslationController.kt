@@ -87,14 +87,11 @@ class TranslationController @Inject constructor(
   //  different language is selected).
 
   private val dataLock = ReentrantLock()
+  private val appLanguageSettings = mutableMapOf<ProfileId, AppLanguageSelection>()
   private val writtenTranslationLanguageSettings =
     mutableMapOf<ProfileId, WrittenTranslationLanguageSelection>()
   private val audioVoiceoverLanguageSettings =
     mutableMapOf<ProfileId, AudioTranslationLanguageSelection>()
-
-  private val appLanguageSelectionCacheStoreMap =
-    mutableMapOf<ProfileId, PersistentCacheStore<AppLanguageSelection>>()
-  private val appLanguageSettings = mutableMapOf<ProfileId, AppLanguageSelection>()
 
   /**
    * Returns a data provider for an app string [OppiaLocale.DisplayLocale] corresponding to the
@@ -223,23 +220,6 @@ class TranslationController @Inject constructor(
       val language = resolutionStatus.resolveToLanguage(systemLanguage)
       val writtenTranslationLocale = localeController.retrieveWrittenTranslationsLocale(language)
       return@combineWithAsync writtenTranslationLocale.retrieveData()
-    }
-  }
-
-  /**
-   * Returns a data provider for the [WrittenTranslationLanguageSelection] corresponding to the
-   * user's selected language for written content strings (see
-   * [getWrittenTranslationContentLanguage]).
-   *
-   * Note that providing the returned selection to [updateWrittenTranslationContentLanguage] should
-   * result in no change to the underlying configured selection.
-   */
-  fun getWrittenTranslationContentLanguageSelection(
-    profileId: ProfileId
-  ): DataProvider<WrittenTranslationLanguageSelection> {
-    val providerId = WRITTEN_TRANSLATION_CONTENT_SELECTION_DATA_PROVIDER_ID
-    return dataProviders.createInMemoryDataProvider(providerId) {
-      retrieveWrittenTranslationContentLanguageSelection(profileId)
     }
   }
 
