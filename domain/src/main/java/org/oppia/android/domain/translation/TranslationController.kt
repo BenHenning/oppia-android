@@ -87,11 +87,14 @@ class TranslationController @Inject constructor(
   //  different language is selected).
 
   private val dataLock = ReentrantLock()
-  private val appLanguageSettings = mutableMapOf<ProfileId, AppLanguageSelection>()
   private val writtenTranslationLanguageSettings =
     mutableMapOf<ProfileId, WrittenTranslationLanguageSelection>()
   private val audioVoiceoverLanguageSettings =
     mutableMapOf<ProfileId, AudioTranslationLanguageSelection>()
+
+  private val appLanguageSelectionCacheStoreMap =
+    mutableMapOf<ProfileId, PersistentCacheStore<AppLanguageSelection>>()
+  private val appLanguageSettings = mutableMapOf<ProfileId, AppLanguageSelection>()
 
   /**
    * Returns a data provider for an app string [OppiaLocale.DisplayLocale] corresponding to the
