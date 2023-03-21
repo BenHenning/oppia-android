@@ -21,14 +21,12 @@ class OptionsActivityPresenter @Inject constructor(
 ) {
   private var navigationDrawerFragment: NavigationDrawerFragment? = null
   private lateinit var toolbar: Toolbar
-  private var profileId: Int? = -1
 
   fun handleOnCreate(
     isFromNavigationDrawer: Boolean,
     extraOptionsTitle: String?,
     isFirstOpen: Boolean,
-    selectedFragment: String,
-    profileId: Int
+    selectedFragment: String
   ) {
     if (isFromNavigationDrawer) {
       activity.setContentView(R.layout.option_activity)
@@ -56,7 +54,6 @@ class OptionsActivityPresenter @Inject constructor(
       R.id.options_fragment_placeholder,
       OptionsFragment.newInstance(isMultipane, isFirstOpen, selectedFragment)
     ).commitNow()
-    this.profileId = profileId
   }
 
   private fun setUpToolbar() {
@@ -107,8 +104,7 @@ class OptionsActivityPresenter @Inject constructor(
   }
 
   fun loadAppLanguageFragment(appLanguage: OppiaLanguage) {
-    val appLanguageFragment =
-      AppLanguageFragment.newInstance(appLanguage, profileId = this.profileId!!)
+    val appLanguageFragment = AppLanguageFragment.newInstance(appLanguage)
     activity.supportFragmentManager
       .beginTransaction()
       .replace(R.id.multipane_options_container, appLanguageFragment)

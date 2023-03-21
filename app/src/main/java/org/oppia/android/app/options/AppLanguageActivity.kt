@@ -5,7 +5,6 @@ import android.content.Intent
 import android.os.Bundle
 import org.oppia.android.app.activity.ActivityComponentImpl
 import org.oppia.android.app.activity.InjectableAutoLocalizedAppCompatActivity
-import org.oppia.android.app.drawer.NAVIGATION_PROFILE_ID_ARGUMENT_KEY
 import org.oppia.android.app.model.AppLanguageActivityParams
 import org.oppia.android.app.model.AppLanguageActivityResultBundle
 import org.oppia.android.app.model.AppLanguageActivityStateBundle
@@ -22,15 +21,12 @@ import javax.inject.Inject
 class AppLanguageActivity : InjectableAutoLocalizedAppCompatActivity() {
   @Inject
   lateinit var appLanguageActivityPresenter: AppLanguageActivityPresenter
-  private var profileId: Int? = -1
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     (activityComponent as ActivityComponentImpl).inject(this)
-    profileId = intent.getIntExtra(NAVIGATION_PROFILE_ID_ARGUMENT_KEY, -1)
     appLanguageActivityPresenter.handleOnCreate(
-      savedInstanceState?.retrieveLanguageFromSavedState() ?: intent.retrieveLanguageFromParams(),
-      profileId!!
+      savedInstanceState?.retrieveLanguageFromSavedState() ?: intent.retrieveLanguageFromParams()
     )
   }
 
@@ -41,15 +37,13 @@ class AppLanguageActivity : InjectableAutoLocalizedAppCompatActivity() {
     /** Returns a new [Intent] to route to [AppLanguageActivity]. */
     fun createAppLanguageActivityIntent(
       context: Context,
-      oppiaLanguage: OppiaLanguage,
-      profileId: Int?
+      oppiaLanguage: OppiaLanguage
     ): Intent {
       return Intent(context, AppLanguageActivity::class.java).apply {
         val arguments = AppLanguageActivityParams.newBuilder().apply {
           this.oppiaLanguage = oppiaLanguage
         }.build()
         putProtoExtra(ACTIVITY_PARAMS_KEY, arguments)
-        putExtra(NAVIGATION_PROFILE_ID_ARGUMENT_KEY, profileId)
         decorateWithScreenName(APP_LANGUAGE_ACTIVITY)
       }
     }

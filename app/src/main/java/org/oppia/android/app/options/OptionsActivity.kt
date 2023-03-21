@@ -46,7 +46,6 @@ class OptionsActivity :
   // used to initially load the suitable fragment in the case of multipane.
   private var isFirstOpen = true
   private lateinit var selectedFragment: String
-  private var profileId: Int? = -1
 
   companion object {
     // TODO(#1655): Re-restrict access to fields in tests post-Gradle.
@@ -73,7 +72,6 @@ class OptionsActivity :
       BOOL_IS_FROM_NAVIGATION_DRAWER_EXTRA_KEY,
       /* defaultValue= */ false
     )
-    profileId = intent.getIntExtra(NAVIGATION_PROFILE_ID_ARGUMENT_KEY, -1)
     if (savedInstanceState != null) {
       isFirstOpen = false
     }
@@ -88,8 +86,7 @@ class OptionsActivity :
       isFromNavigationDrawer,
       extraOptionsTitle,
       isFirstOpen,
-      selectedFragment,
-      profileId!!
+      selectedFragment
     )
     title = resourceHandler.getStringInLocale(R.string.menu_options)
   }
@@ -130,8 +127,7 @@ class OptionsActivity :
     startActivityForResult(
       AppLanguageActivity.createAppLanguageActivityIntent(
         this,
-        oppiaLanguage,
-        profileId!!
+        oppiaLanguage
       ),
       REQUEST_CODE_APP_LANGUAGE
     )
