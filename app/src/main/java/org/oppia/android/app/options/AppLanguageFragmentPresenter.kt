@@ -85,23 +85,21 @@ class AppLanguageFragmentPresenter @Inject constructor(
 
     val profileId = profileManagementController.getCurrentProfileId()
 
-    if (profileId != null) {
-      translationController.updateAppLanguage(
-        profileId,
-        appLanguageSelection
-      ).toLiveData().observe(
-        fragment,
-        {
-          when (it) {
-            is AsyncResult.Success -> {
-              appLanguage = oppiaLanguage
-            }
-            is AsyncResult.Failure ->
-              oppiaLogger.e("APP_LANGUAGE_TAG", it.error.toString())
-            is AsyncResult.Pending -> {} // Wait for a result.
+    translationController.updateAppLanguage(
+      profileId,
+      appLanguageSelection
+    ).toLiveData().observe(
+      fragment,
+      {
+        when (it) {
+          is AsyncResult.Success -> {
+            appLanguage = oppiaLanguage
           }
+          is AsyncResult.Failure ->
+            oppiaLogger.e("APP_LANGUAGE_TAG", it.error.toString())
+          is AsyncResult.Pending -> {} // Wait for a result.
         }
-      )
-    }
+      }
+    )
   }
 }

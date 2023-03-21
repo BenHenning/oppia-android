@@ -67,7 +67,7 @@ class AppLanguageWatcherMixin @Inject constructor(
 
     var currentUserProfileId = profileManagementController.getCurrentProfileId()
 
-    if (currentUserProfileId?.internalId == -1) {
+    if (currentUserProfileId.internalId == -1) {
       currentUserProfileId = ProfileId.getDefaultInstance()
     }
 
@@ -78,10 +78,10 @@ class AppLanguageWatcherMixin @Inject constructor(
     }
 
     val appLanguageLocaleDataProvider =
-      currentUserProfileId?.let { translationController.getAppLanguageLocale(it) }
+      translationController.getAppLanguageLocale(currentUserProfileId)
 
-    val liveData = appLanguageLocaleDataProvider?.toLiveData()
-    liveData?.observe(
+    val liveData = appLanguageLocaleDataProvider.toLiveData()
+    liveData.observe(
       activity,
       object : Observer<AsyncResult<OppiaLocale.DisplayLocale>> {
         override fun onChanged(localeResult: AsyncResult<OppiaLocale.DisplayLocale>) {
