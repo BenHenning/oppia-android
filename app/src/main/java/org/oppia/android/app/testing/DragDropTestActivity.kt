@@ -2,11 +2,11 @@ package org.oppia.android.app.testing
 
 import android.os.Bundle
 import org.oppia.android.app.activity.ActivityComponentImpl
-import org.oppia.android.app.activity.InjectableAutoLocalizedAppCompatActivity
+import org.oppia.android.app.activity.InjectableAppCompatActivity
 import javax.inject.Inject
 
 /** Test Activity used for testing [DragAndDropItemFacilitator] functionality */
-class DragDropTestActivity : InjectableAutoLocalizedAppCompatActivity() {
+class DragDropTestActivity : InjectableAppCompatActivity() {
 
   @Inject
   lateinit var dragDropTestActivityPresenter: DragDropTestActivityPresenter

@@ -4,13 +4,13 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import org.oppia.android.app.activity.ActivityComponentImpl
-import org.oppia.android.app.activity.InjectableSystemLocalizedAppCompatActivity
+import org.oppia.android.app.activity.InjectableAppCompatActivity
 import org.oppia.android.app.model.ScreenName.PROFILE_CHOOSER_ACTIVITY
 import org.oppia.android.util.logging.CurrentAppScreenNameIntentDecorator.decorateWithScreenName
 import javax.inject.Inject
 
 /** Activity that controls profile creation and selection. */
-class ProfileChooserActivity : InjectableSystemLocalizedAppCompatActivity() {
+class ProfileChooserActivity : InjectableAppCompatActivity() {
   @Inject
   lateinit var profileChooserActivityPresenter: ProfileChooserActivityPresenter
 
@@ -21,6 +21,11 @@ class ProfileChooserActivity : InjectableSystemLocalizedAppCompatActivity() {
         decorateWithScreenName(PROFILE_CHOOSER_ACTIVITY)
       }
     }
+  }
+
+  override fun attachBaseContext(newBase: Context?) {
+    shouldUseSystemLanguage = true
+    super.attachBaseContext(newBase)
   }
 
   override fun onCreate(savedInstanceState: Bundle?) {

@@ -4,7 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import org.oppia.android.app.activity.ActivityComponentImpl
-import org.oppia.android.app.activity.InjectableAutoLocalizedAppCompatActivity
+import org.oppia.android.app.activity.InjectableAppCompatActivity
 import org.oppia.android.app.model.ProfileId
 import org.oppia.android.app.topic.conceptcard.ConceptCardFragment
 import org.oppia.android.app.topic.conceptcard.ConceptCardListener
@@ -13,8 +13,7 @@ import org.oppia.android.util.extensions.putProtoExtra
 import javax.inject.Inject
 
 /** Test Activity used for testing ConceptCardFragment */
-class ConceptCardFragmentTestActivity : InjectableAutoLocalizedAppCompatActivity(),
-  ConceptCardListener {
+class ConceptCardFragmentTestActivity : InjectableAppCompatActivity(), ConceptCardListener {
 
   @Inject
   lateinit var conceptCardFragmentTestActivityController: ConceptCardFragmentTestActivityPresenter

@@ -14,15 +14,10 @@ import org.oppia.android.app.translation.AppLanguageActivityInjectorProvider
 import org.oppia.android.app.translation.AppLanguageApplicationInjectorProvider
 
 /**
- * [Boolean] value that is passed to [AppLanguageWatcherMixin] and should not change for activities inheriting [InjectableAutoLocalizedAppCompatActivity].
- */
-private const val SHOULD_USE_SYSTEM_LANGUAGE = false
-
-/**
  * An [AppCompatActivity] that facilitates field injection to child activities and constituent
  * fragments that extend [org.oppia.android.app.fragment.InjectableFragment].
  */
-abstract class InjectableAutoLocalizedAppCompatActivity :
+abstract class InjectableAppCompatActivity :
   AppCompatActivity(), FragmentComponentFactory, AppLanguageActivityInjectorProvider {
   /**
    * The [ActivityComponent] corresponding to this activity. This cannot be used before
@@ -30,6 +25,10 @@ abstract class InjectableAutoLocalizedAppCompatActivity :
    * during activity creation (which is recommended to be done in an override of [onCreate]).
    */
   lateinit var activityComponent: ActivityComponent
+  /**
+   * [Boolean] value that can be updated to provide SystemLanguage to a particular activity.
+   */
+  var shouldUseSystemLanguage: Boolean = false
 
   override fun attachBaseContext(newBase: Context?) {
     val applicationContext = checkNotNull(newBase?.applicationContext) {
@@ -77,7 +76,9 @@ abstract class InjectableAutoLocalizedAppCompatActivity :
     val appLanguageActivityInjector = activityComponent as AppLanguageActivityInjector
     val appLanguageLocaleHandler = appLanguageAppInjector.getAppLanguageHandler()
     val appLanguageWatcherMixin = appLanguageActivityInjector.getAppLanguageWatcherMixin()
-    appLanguageWatcherMixin.initialize(SHOULD_USE_SYSTEM_LANGUAGE)
+
+    // Check if a particular Activity should use SystemLanguage.
+    appLanguageWatcherMixin.initialize(shouldUseSystemLanguage)
 
     return Configuration(newBase?.resources?.configuration).also { newConfiguration ->
       appLanguageLocaleHandler.initializeLocaleForActivity(newConfiguration)

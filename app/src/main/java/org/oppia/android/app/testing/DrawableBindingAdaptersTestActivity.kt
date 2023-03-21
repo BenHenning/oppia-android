@@ -3,10 +3,10 @@ package org.oppia.android.app.testing
 import android.os.Bundle
 import org.oppia.android.R
 import org.oppia.android.app.activity.ActivityComponentImpl
-import org.oppia.android.app.activity.InjectableAutoLocalizedAppCompatActivity
+import org.oppia.android.app.activity.InjectableAppCompatActivity
 
 /** Test activity for [org.oppia.android.app.databinding.DrawableBindingAdapters]. */
-class DrawableBindingAdaptersTestActivity : InjectableAutoLocalizedAppCompatActivity() {
+class DrawableBindingAdaptersTestActivity : InjectableAppCompatActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     (activityComponent as ActivityComponentImpl).inject(this)

@@ -2,7 +2,7 @@ package org.oppia.android.app.testing
 
 import android.os.Bundle
 import org.oppia.android.app.activity.ActivityComponentImpl
-import org.oppia.android.app.activity.InjectableAutoLocalizedAppCompatActivity
+import org.oppia.android.app.activity.InjectableAppCompatActivity
 import org.oppia.android.app.home.RouteToExplorationListener
 import org.oppia.android.app.model.ExplorationActivityParams
 import org.oppia.android.app.model.ProfileId
@@ -12,8 +12,7 @@ import org.oppia.android.app.utility.SplitScreenManager
 import javax.inject.Inject
 
 /** The activity for testing [TopicFragment]. */
-class ExplorationTestActivity : InjectableAutoLocalizedAppCompatActivity(),
-  RouteToExplorationListener {
+class ExplorationTestActivity : InjectableAppCompatActivity(), RouteToExplorationListener {
   @Inject
   lateinit var presenter: ExplorationTestActivityPresenter
 
