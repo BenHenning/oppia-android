@@ -48,9 +48,6 @@ gradlew.bat @BenHenning
 /.github/workflows/ @BenHenning
 /.github/stale.yml @BenHenning
 
-# Wiki
-/wiki/ @BenHenning
-
 # Devbots configurations.
 /.devbots/ @BenHenning
 
