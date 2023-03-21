@@ -13,8 +13,7 @@ import org.oppia.android.util.extensions.putProtoExtra
 import javax.inject.Inject
 
 /** Test Activity used for testing ConceptCardFragment */
-class ConceptCardFragmentTestActivity :
-  InjectableAutoLocalizedAppCompatActivity(),
+class ConceptCardFragmentTestActivity : InjectableAutoLocalizedAppCompatActivity(),
   ConceptCardListener {
 
   @Inject

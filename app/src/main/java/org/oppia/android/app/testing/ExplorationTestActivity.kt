@@ -12,8 +12,7 @@ import org.oppia.android.app.utility.SplitScreenManager
 import javax.inject.Inject
 
 /** The activity for testing [TopicFragment]. */
-class ExplorationTestActivity :
-  InjectableAutoLocalizedAppCompatActivity(),
+class ExplorationTestActivity : InjectableAutoLocalizedAppCompatActivity(),
   RouteToExplorationListener {
   @Inject
   lateinit var presenter: ExplorationTestActivityPresenter
