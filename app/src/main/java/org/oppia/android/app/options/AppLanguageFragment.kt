@@ -66,7 +66,7 @@ class AppLanguageFragment : InjectableFragment(), AppLanguageRadioButtonListener
       checkNotNull(
         savedInstanceState?.retrieveLanguageFromSavedState()
           ?: arguments?.retrieveLanguageFromArguments()
-      ) { "Expected arguments to be passed to AppLanguageFragment" }
+      ) { "Expected arguments to be passed to AudioLanguageFragment" }
     profileId = arguments?.getInt(NAVIGATION_PROFILE_ID_ARGUMENT_KEY, -1)
 
     return appLanguageFragmentPresenter.handleOnCreateView(
