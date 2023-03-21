@@ -281,6 +281,7 @@ class HintsAndSolutionDialogFragmentPresenter @Inject constructor(
 
     binding.solutionTitle.text =
       resourceHandler.capitalizeForHumans(solutionViewModel.title.get()!!)
+    // TODO(#1050): Update to display answers for any answer type.
     if (solutionViewModel.correctAnswer.get().isNullOrEmpty()) {
       binding.solutionCorrectAnswer.text =
         resourceHandler.getStringInLocaleWithoutWrapping(
