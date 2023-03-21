@@ -1296,13 +1296,12 @@ class TranslationControllerTest {
   fun testGetAudioContentSelection_uninitializedToUseApp_returnsUninitializedSelection() {
     forceDefaultLocale(Locale.ROOT)
 
-    val audioTranslationLanguageSelection =
-      AudioTranslationLanguageSelection.newBuilder().apply { useAppLanguage = true }.build()
     val updateProvider = translationController.updateAudioTranslationContentLanguage(
       PROFILE_ID_0,
-      audioTranslationLanguageSelection
+      AudioTranslationLanguageSelection.newBuilder().apply { useAppLanguage = true }.build()
     )
 
+    // The previous selection was uninitialized.
     val selection = monitorFactory.waitForNextSuccessfulResult(updateProvider)
     assertThat(selection).isEqualToDefaultInstance()
   }
@@ -1314,7 +1313,7 @@ class TranslationControllerTest {
     val updateProvider = translationController.updateAudioTranslationContentLanguage(
       PROFILE_ID_0,
       AudioTranslationLanguageSelection.newBuilder().apply { selectedLanguage = ENGLISH }.build()
-    )as DataProvider<AudioTranslationLanguageSelection>
+    )
 
     // The previous selection was uninitialized.
     val selection = monitorFactory.waitForNextSuccessfulResult(updateProvider)
@@ -1329,7 +1328,7 @@ class TranslationControllerTest {
     val updateProvider = translationController.updateAudioTranslationContentLanguage(
       PROFILE_ID_0,
       AudioTranslationLanguageSelection.newBuilder().apply { selectedLanguage = ENGLISH }.build()
-    ) as DataProvider<AudioTranslationLanguageSelection>
+    )
 
     // The previous selection was to use the app language.
     val selection = monitorFactory.waitForNextSuccessfulResult(updateProvider)
@@ -1344,7 +1343,7 @@ class TranslationControllerTest {
     val updateProvider = translationController.updateAudioTranslationContentLanguage(
       PROFILE_ID_0,
       AudioTranslationLanguageSelection.newBuilder().apply { selectedLanguage = HINDI }.build()
-    ) as DataProvider<AudioTranslationLanguageSelection>
+    )
 
     // The previous selection was English.
     val selection = monitorFactory.waitForNextSuccessfulResult(updateProvider)
