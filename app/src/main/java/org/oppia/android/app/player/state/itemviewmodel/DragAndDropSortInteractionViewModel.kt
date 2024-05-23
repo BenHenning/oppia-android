@@ -3,10 +3,12 @@ package org.oppia.android.app.player.state.itemviewmodel
 import androidx.databinding.Observable
 import androidx.databinding.ObservableField
 import androidx.recyclerview.widget.RecyclerView
+import org.oppia.android.app.model.AnswerErrorCategory
 import org.oppia.android.app.model.Interaction
 import org.oppia.android.app.model.InteractionObject
 import org.oppia.android.app.model.ListOfSetsOfHtmlStrings
 import org.oppia.android.app.model.ListOfSetsOfTranslatableHtmlContentIds
+import org.oppia.android.app.model.RawUserAnswer
 import org.oppia.android.app.model.SetOfTranslatableHtmlContentIds
 import org.oppia.android.app.model.StringList
 import org.oppia.android.app.model.SubtitledHtml
@@ -27,6 +29,7 @@ import javax.inject.Inject
 class DragAndDropSortInteractionViewModel private constructor(
   val entityId: String,
   val hasConversationView: Boolean,
+  rawUserAnswer: RawUserAnswer,
   interaction: Interaction,
   private val interactionAnswerErrorOrAvailabilityCheckReceiver: InteractionAnswerErrorOrAvailabilityCheckReceiver, // ktlint-disable max-line-length
   val isSplitView: Boolean,
@@ -56,7 +59,13 @@ class DragAndDropSortInteractionViewModel private constructor(
     }
 
   private val _choiceItems: MutableList<DragDropInteractionContentViewModel> =
-    computeChoiceItems(contentIdHtmlMap, choiceSubtitledHtmls, this, resourceHandler)
+    computeChoiceItems(
+      contentIdHtmlMap,
+      choiceSubtitledHtmls,
+      this,
+      resourceHandler,
+      rawUserAnswer.listOfSetsOfTranslatableHtmlContentIds
+    )
 
   val choiceItems: List<DragDropInteractionContentViewModel> = _choiceItems
 
@@ -129,6 +138,15 @@ class DragAndDropSortInteractionViewModel private constructor(
       this@DragAndDropSortInteractionViewModel.writtenTranslationContext
   }.build()
 
+  override fun getRawUserAnswer(): RawUserAnswer = RawUserAnswer.newBuilder().apply {
+    val htmlContentIds = _choiceItems.map { it.htmlContent }
+    listOfSetsOfTranslatableHtmlContentIds =
+      ListOfSetsOfTranslatableHtmlContentIds.newBuilder().apply {
+        addAllContentIdLists(htmlContentIds)
+      }.build()
+    lastErrorCategory = AnswerErrorCategory.NO_ERROR
+  }.build()
+
   /** Returns an HTML list containing all of the HTML string elements as items in the list. */
   private fun convertItemsToAnswer(htmlItems: List<StringList>): ListOfSetsOfHtmlStrings {
     return ListOfSetsOfHtmlStrings.newBuilder()
@@ -198,6 +216,7 @@ class DragAndDropSortInteractionViewModel private constructor(
     override fun create(
       entityId: String,
       hasConversationView: Boolean,
+      rawUserAnswer: RawUserAnswer,
       interaction: Interaction,
       interactionAnswerReceiver: InteractionAnswerReceiver,
       answerErrorReceiver: InteractionAnswerErrorOrAvailabilityCheckReceiver,
@@ -208,6 +227,7 @@ class DragAndDropSortInteractionViewModel private constructor(
       return DragAndDropSortInteractionViewModel(
         entityId,
         hasConversationView,
+        rawUserAnswer,
         interaction,
         answerErrorReceiver,
         isSplitView,
@@ -223,17 +243,24 @@ class DragAndDropSortInteractionViewModel private constructor(
       contentIdHtmlMap: Map<String, String>,
       choiceStrings: List<SubtitledHtml>,
       dragAndDropSortInteractionViewModel: DragAndDropSortInteractionViewModel,
-      resourceHandler: AppLanguageResourceHandler
+      resourceHandler: AppLanguageResourceHandler,
+      listOfSetsOfTranslatableHtmlContentIds: ListOfSetsOfTranslatableHtmlContentIds
     ): MutableList<DragDropInteractionContentViewModel> {
-      return choiceStrings.mapIndexed { index, subtitledHtml ->
+      val selectedChoices =
+        if (listOfSetsOfTranslatableHtmlContentIds.contentIdListsList.isEmpty()) {
+          choiceStrings.map { subtitledHtml ->
+            SetOfTranslatableHtmlContentIds.newBuilder().apply {
+              addContentIds(
+                TranslatableHtmlContentId.newBuilder().setContentId(subtitledHtml.contentId)
+              )
+            }
+          }
+        } else listOfSetsOfTranslatableHtmlContentIds.contentIdListsList
+      return selectedChoices.mapIndexed { index, contentId ->
         DragDropInteractionContentViewModel(
           contentIdHtmlMap = contentIdHtmlMap,
           htmlContent = SetOfTranslatableHtmlContentIds.newBuilder().apply {
-            addContentIds(
-              TranslatableHtmlContentId.newBuilder().apply {
-                contentId = subtitledHtml.contentId
-              }
-            )
+            addAllContentIds(contentId.contentIdsList)
           }.build(),
           itemIndex = index,
           listSize = choiceStrings.size,

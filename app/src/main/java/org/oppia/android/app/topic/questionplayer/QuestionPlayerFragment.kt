@@ -9,6 +9,7 @@ import org.oppia.android.app.fragment.FragmentComponentImpl
 import org.oppia.android.app.fragment.InjectableFragment
 import org.oppia.android.app.model.HelpIndex
 import org.oppia.android.app.model.ProfileId
+import org.oppia.android.app.model.RawUserAnswer
 import org.oppia.android.app.model.UserAnswer
 import org.oppia.android.app.player.state.answerhandling.InteractionAnswerErrorOrAvailabilityCheckReceiver
 import org.oppia.android.app.player.state.answerhandling.InteractionAnswerReceiver
@@ -22,6 +23,11 @@ import org.oppia.android.app.player.state.listener.SubmitNavigationButtonListene
 import org.oppia.android.util.extensions.getProto
 import org.oppia.android.util.extensions.putProto
 import javax.inject.Inject
+
+private const val QUESTION_PLAYER_FRAGMENT_RAW_USER_ANSWER_KEY =
+  "QuestionPlayerFragment.raw_user_answer"
+private const val QUESTION_PLAYER_FRAGMENT_ARE_PREVIOUS_RESPONSES_HEADER_EXPANDED_KEY =
+  "QuestionPlayerFragment.are_previous_responses_header_expanded"
 
 /** Fragment that contains all questions in Question Player. */
 class QuestionPlayerFragment :
@@ -52,8 +58,17 @@ class QuestionPlayerFragment :
     val args = checkNotNull(arguments) {
       "Expected arguments to be passed to QuestionPlayerFragment"
     }
+    val rawUserAnswer = savedInstanceState?.getProto(
+      QUESTION_PLAYER_FRAGMENT_RAW_USER_ANSWER_KEY, RawUserAnswer.getDefaultInstance()
+    ) ?: RawUserAnswer.getDefaultInstance()
+    val arePreviousResponsesExpanded =
+      savedInstanceState?.getBoolean(
+        QUESTION_PLAYER_FRAGMENT_ARE_PREVIOUS_RESPONSES_HEADER_EXPANDED_KEY
+      ) ?: false
     val profileId = args.getProto(PROFILE_ID_ARGUMENT_KEY, ProfileId.getDefaultInstance())
-    return questionPlayerFragmentPresenter.handleCreateView(inflater, container, profileId)
+    return questionPlayerFragmentPresenter.handleCreateView(
+      inflater, container, rawUserAnswer, arePreviousResponsesExpanded, profileId
+    )
   }
 
   override fun onAnswerReadyForSubmission(answer: UserAnswer) {
@@ -82,6 +97,18 @@ class QuestionPlayerFragment :
 
   override fun onHintAvailable(helpIndex: HelpIndex, isCurrentStatePendingState: Boolean) =
     questionPlayerFragmentPresenter.onHintAvailable(helpIndex, isCurrentStatePendingState)
+
+  override fun onSaveInstanceState(outState: Bundle) {
+    super.onSaveInstanceState(outState)
+    outState.putProto(
+      QUESTION_PLAYER_FRAGMENT_RAW_USER_ANSWER_KEY,
+      questionPlayerFragmentPresenter.getRawUserAnswer()
+    )
+    outState.putBoolean(
+      QUESTION_PLAYER_FRAGMENT_ARE_PREVIOUS_RESPONSES_HEADER_EXPANDED_KEY,
+      questionPlayerFragmentPresenter.getArePreviousResponsesExpanded()
+    )
+  }
 
   fun handleKeyboardAction() = questionPlayerFragmentPresenter.handleKeyboardAction()
 

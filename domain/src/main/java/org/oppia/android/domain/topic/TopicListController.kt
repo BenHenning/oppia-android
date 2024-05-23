@@ -212,6 +212,7 @@ class TopicListController @Inject constructor(
           baseMessage = StoryRecord.getDefaultInstance()
         )
       }
+      val firstStoryId = storyRecords.getOrNull(0)?.storyId
       TopicSummary.newBuilder().apply {
         this.topicId = topicId
         putAllWrittenTranslations(topicRecord.writtenTranslationsMap)
@@ -223,6 +224,7 @@ class TopicListController @Inject constructor(
         } else {
           TopicPlayAvailability.newBuilder().setAvailableToPlayInFuture(true).build()
         }
+        storyRecords.firstOrNull()?.storyId?.let { this.firstStoryId = it }
       }.build()
     } else {
       createTopicSummaryFromJson(topicId, jsonAssetRetriever.loadJsonFromAsset("$topicId.json")!!)
@@ -244,6 +246,9 @@ class TopicListController @Inject constructor(
         .getJSONArray("node_titles")
         .length()
     }
+    val firstStoryId =
+      if (storyData.length() == 0) "" else storyData.getJSONObject(0).getStringFromObject("id")
+
     val topicPlayAvailability = if (jsonObject.getBoolean("published")) {
       TopicPlayAvailability.newBuilder().setAvailableToPlayNow(true).build()
     } else {
@@ -261,6 +266,7 @@ class TopicListController @Inject constructor(
       .setTotalChapterCount(totalChapterCount)
       .setTopicThumbnail(createTopicThumbnailFromJson(jsonObject))
       .setTopicPlayAvailability(topicPlayAvailability)
+      .setFirstStoryId(firstStoryId)
       .build()
   }
 
@@ -347,8 +353,8 @@ class TopicListController @Inject constructor(
 
     sortedTopicProgressList.forEach { topicProgress ->
       val topic = topicController.retrieveTopic(topicProgress.topicId)
-      // Ignore topics that are no longer on the device.
-      if (topic != null) {
+      // Ignore topics that are no longer on the device, or that have been unpublished.
+      if (topic?.topicPlayAvailability?.availabilityCase == AVAILABLE_TO_PLAY_NOW) {
         val isTopicConsideredCompleted = topic.hasAtLeastOneStoryCompleted(topicProgress)
 
         topicProgress.storyProgressMap.values.forEach { storyProgress ->

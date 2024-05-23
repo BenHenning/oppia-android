@@ -1,5 +1,7 @@
 package org.oppia.android.app.player.state.answerhandling
 
+import org.oppia.android.app.model.AnswerErrorCategory
+import org.oppia.android.app.model.RawUserAnswer
 import org.oppia.android.app.model.UserAnswer
 
 /**
@@ -22,9 +24,17 @@ interface InteractionAnswerHandler {
     return null
   }
 
-  /** Return the current answer that is ready for handling. */
+  /** Returns the pending answer awaiting submission by the user. */
   fun getPendingAnswer(): UserAnswer? {
     return null
+  }
+
+  /**
+   * Returns a raw representation of the current answer entered by the user which is used to retain
+   * state on configuration changes.
+   */
+  fun getRawUserAnswer(): RawUserAnswer {
+    return RawUserAnswer.getDefaultInstance()
   }
 }
 
@@ -34,12 +44,4 @@ interface InteractionAnswerHandler {
  */
 interface InteractionAnswerReceiver {
   fun onAnswerReadyForSubmission(answer: UserAnswer)
-}
-
-/** Categories of errors that can be inferred from a pending answer.  */
-enum class AnswerErrorCategory {
-  /** Corresponds to errors that may be found while the user is trying to input an answer.  */
-  REAL_TIME,
-  /** Corresponds to errors that may be found only when a user tries to submit an answer.  */
-  SUBMIT_TIME
 }

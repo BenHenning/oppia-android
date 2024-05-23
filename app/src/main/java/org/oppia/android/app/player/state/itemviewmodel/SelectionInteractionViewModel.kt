@@ -3,8 +3,11 @@ package org.oppia.android.app.player.state.itemviewmodel
 import androidx.databinding.Observable
 import androidx.databinding.ObservableField
 import androidx.databinding.ObservableList
+import org.oppia.android.app.model.AnswerErrorCategory
 import org.oppia.android.app.model.Interaction
 import org.oppia.android.app.model.InteractionObject
+import org.oppia.android.app.model.ItemSelectionRawAnswer
+import org.oppia.android.app.model.RawUserAnswer
 import org.oppia.android.app.model.SetOfTranslatableHtmlContentIds
 import org.oppia.android.app.model.SubtitledHtml
 import org.oppia.android.app.model.TranslatableHtmlContentId
@@ -27,6 +30,7 @@ enum class SelectionItemInputType {
 class SelectionInteractionViewModel private constructor(
   val entityId: String,
   val hasConversationView: Boolean,
+  rawUserAnswer: RawUserAnswer,
   interaction: Interaction,
   private val interactionAnswerErrorOrAvailabilityCheckReceiver: InteractionAnswerErrorOrAvailabilityCheckReceiver, // ktlint-disable max-line-length
   val isSplitView: Boolean,
@@ -51,7 +55,9 @@ class SelectionInteractionViewModel private constructor(
     interaction.customizationArgsMap["maxAllowableSelectionCount"]?.signedInt
       ?: minAllowableSelectionCount
   }
+
   private val selectedItems: MutableList<Int> = mutableListOf()
+
   val choiceItems: ObservableList<SelectionInteractionContentViewModel> =
     computeChoiceItems(choiceSubtitledHtmls, hasConversationView, this)
 
@@ -67,6 +73,13 @@ class SelectionInteractionViewModel private constructor(
           )
         }
       }
+    if (rawUserAnswer.itemSelection.selectedIndexesList.isNotEmpty()) {
+      rawUserAnswer.itemSelection.selectedIndexesList.forEach { index ->
+        selectedItems += index
+        updateIsAnswerAvailable()
+        choiceItems[index].isAnswerSelected.set(true)
+      }
+    }
     isAnswerAvailable.addOnPropertyChangedCallback(callback)
   }
 
@@ -96,6 +109,13 @@ class SelectionInteractionViewModel private constructor(
       htmlAnswer = convertSelectedItemsToHtmlString(itemHtmls)
     }
     writtenTranslationContext = translationContext
+  }.build()
+
+  override fun getRawUserAnswer(): RawUserAnswer = RawUserAnswer.newBuilder().apply {
+    itemSelection = ItemSelectionRawAnswer.newBuilder().apply {
+      addAllSelectedIndexes(selectedItems)
+    }.build()
+    lastErrorCategory = AnswerErrorCategory.NO_ERROR
   }.build()
 
   /** Returns an HTML list containing all of the HTML string elements as items in the list. */
@@ -166,6 +186,7 @@ class SelectionInteractionViewModel private constructor(
     override fun create(
       entityId: String,
       hasConversationView: Boolean,
+      rawUserAnswer: RawUserAnswer,
       interaction: Interaction,
       interactionAnswerReceiver: InteractionAnswerReceiver,
       answerErrorReceiver: InteractionAnswerErrorOrAvailabilityCheckReceiver,
@@ -176,6 +197,7 @@ class SelectionInteractionViewModel private constructor(
       return SelectionInteractionViewModel(
         entityId,
         hasConversationView,
+        rawUserAnswer,
         interaction,
         answerErrorReceiver,
         isSplitView,

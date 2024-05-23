@@ -4,8 +4,9 @@ import androidx.databinding.ObservableField
 import androidx.databinding.ObservableList
 import androidx.lifecycle.ViewModel
 import org.oppia.android.app.fragment.FragmentScope
+import org.oppia.android.app.model.AnswerErrorCategory
+import org.oppia.android.app.model.RawUserAnswer
 import org.oppia.android.app.model.UserAnswer
-import org.oppia.android.app.player.state.answerhandling.AnswerErrorCategory
 import org.oppia.android.app.player.state.answerhandling.InteractionAnswerHandler
 import org.oppia.android.app.player.state.itemviewmodel.StateItemViewModel
 import org.oppia.android.app.viewmodel.ObservableArrayList
@@ -54,6 +55,14 @@ class StateViewModel @Inject constructor() : ObservableViewModel() {
         getAnswerItemList()
       )
     ) ?: UserAnswer.getDefaultInstance()
+  }
+
+  /** Retrieves the [RawUserAnswer] from the handler provided by [retrieveAnswerHandler]. */
+  fun getRawUserAnswer(
+    retrieveAnswerHandler: (List<StateItemViewModel>) -> InteractionAnswerHandler?
+  ): RawUserAnswer {
+    return retrieveAnswerHandler(getAnswerItemList())?.getRawUserAnswer()
+      ?: RawUserAnswer.getDefaultInstance()
   }
 
   private fun getPendingAnswerWithoutError(

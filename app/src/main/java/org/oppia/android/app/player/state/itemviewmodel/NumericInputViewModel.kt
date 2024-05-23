@@ -4,12 +4,13 @@ import android.text.Editable
 import android.text.TextWatcher
 import androidx.databinding.Observable
 import androidx.databinding.ObservableField
+import org.oppia.android.app.model.AnswerErrorCategory
 import org.oppia.android.app.model.Interaction
 import org.oppia.android.app.model.InteractionObject
+import org.oppia.android.app.model.RawUserAnswer
 import org.oppia.android.app.model.UserAnswer
 import org.oppia.android.app.model.WrittenTranslationContext
 import org.oppia.android.app.parser.StringToNumberParser
-import org.oppia.android.app.player.state.answerhandling.AnswerErrorCategory
 import org.oppia.android.app.player.state.answerhandling.InteractionAnswerErrorOrAvailabilityCheckReceiver
 import org.oppia.android.app.player.state.answerhandling.InteractionAnswerHandler
 import org.oppia.android.app.player.state.answerhandling.InteractionAnswerReceiver
@@ -19,16 +20,18 @@ import javax.inject.Inject
 /** [StateItemViewModel] for the numeric input interaction. */
 class NumericInputViewModel private constructor(
   val hasConversationView: Boolean,
+  rawUserAnswer: RawUserAnswer,
   private val interactionAnswerErrorOrAvailabilityCheckReceiver: InteractionAnswerErrorOrAvailabilityCheckReceiver, // ktlint-disable max-line-length
   val isSplitView: Boolean,
   private val writtenTranslationContext: WrittenTranslationContext,
   private val resourceHandler: AppLanguageResourceHandler
 ) : StateItemViewModel(ViewType.NUMERIC_INPUT_INTERACTION), InteractionAnswerHandler {
-  var answerText: CharSequence = ""
+  var answerText: CharSequence = rawUserAnswer.textualAnswer
   private var pendingAnswerError: String? = null
   val errorMessage = ObservableField<String>("")
   var isAnswerAvailable = ObservableField<Boolean>(false)
   private val stringToNumberParser: StringToNumberParser = StringToNumberParser()
+  private var currentErrorCategory = AnswerErrorCategory.NO_ERROR
 
   init {
     val callback: Observable.OnPropertyChangedCallback =
@@ -40,6 +43,7 @@ class NumericInputViewModel private constructor(
           )
         }
       }
+
     errorMessage.addOnPropertyChangedCallback(callback)
     isAnswerAvailable.addOnPropertyChangedCallback(callback)
   }
@@ -54,8 +58,13 @@ class NumericInputViewModel private constructor(
         AnswerErrorCategory.SUBMIT_TIME ->
           stringToNumberParser.getSubmitTimeError(answerText.toString())
             .getErrorMessageFromStringRes(resourceHandler)
+        AnswerErrorCategory.ANSWER_ERROR_CATEGORY_UNSPECIFIED, AnswerErrorCategory.UNRECOGNIZED,
+        AnswerErrorCategory.NO_ERROR -> null
       }
     }
+    currentErrorCategory = if (pendingAnswerError == null) {
+      AnswerErrorCategory.NO_ERROR
+    } else category
     errorMessage.set(pendingAnswerError)
     return pendingAnswerError
   }
@@ -90,6 +99,13 @@ class NumericInputViewModel private constructor(
     }
   }.build()
 
+  override fun getRawUserAnswer(): RawUserAnswer = RawUserAnswer.newBuilder().apply {
+    if (answerText.isNotEmpty()) {
+      textualAnswer = answerText.toString()
+    }
+    lastErrorCategory = currentErrorCategory
+  }.build()
+
   /** Implementation of [StateItemViewModel.InteractionItemFactory] for this view model. */
   class FactoryImpl @Inject constructor(
     private val resourceHandler: AppLanguageResourceHandler
@@ -97,6 +113,7 @@ class NumericInputViewModel private constructor(
     override fun create(
       entityId: String,
       hasConversationView: Boolean,
+      rawUserAnswer: RawUserAnswer,
       interaction: Interaction,
       interactionAnswerReceiver: InteractionAnswerReceiver,
       answerErrorReceiver: InteractionAnswerErrorOrAvailabilityCheckReceiver,
@@ -106,6 +123,7 @@ class NumericInputViewModel private constructor(
     ): StateItemViewModel {
       return NumericInputViewModel(
         hasConversationView,
+        rawUserAnswer,
         answerErrorReceiver,
         isSplitView,
         writtenTranslationContext,

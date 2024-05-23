@@ -7,8 +7,10 @@ import android.text.Spanned
 import android.text.style.ClickableSpan
 import android.text.style.ImageSpan
 import android.view.View
+import android.view.ViewGroup
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.children
 import androidx.recyclerview.widget.RecyclerView
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ActivityScenario.launch
@@ -17,6 +19,7 @@ import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.PerformException
 import androidx.test.espresso.UiController
 import androidx.test.espresso.ViewAction
+import androidx.test.espresso.ViewAssertion
 import androidx.test.espresso.ViewInteraction
 import androidx.test.espresso.action.GeneralLocation
 import androidx.test.espresso.action.Press
@@ -28,6 +31,7 @@ import androidx.test.espresso.contrib.RecyclerViewActions.scrollToHolder
 import androidx.test.espresso.intent.Intents
 import androidx.test.espresso.matcher.RootMatchers.isDialog
 import androidx.test.espresso.matcher.ViewMatchers.hasChildCount
+import androidx.test.espresso.matcher.ViewMatchers.isChecked
 import androidx.test.espresso.matcher.ViewMatchers.isClickable
 import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
 import androidx.test.espresso.matcher.ViewMatchers.isEnabled
@@ -55,6 +59,7 @@ import org.hamcrest.CoreMatchers.containsString
 import org.hamcrest.CoreMatchers.not
 import org.hamcrest.Description
 import org.hamcrest.Matcher
+import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.TypeSafeMatcher
 import org.junit.After
 import org.junit.Before
@@ -65,12 +70,17 @@ import org.junit.runner.RunWith
 import org.oppia.android.R
 import org.oppia.android.app.activity.ActivityComponent
 import org.oppia.android.app.activity.ActivityComponentFactory
+import org.oppia.android.app.activity.route.ActivityRouterModule
 import org.oppia.android.app.application.ApplicationComponent
 import org.oppia.android.app.application.ApplicationInjector
 import org.oppia.android.app.application.ApplicationInjectorProvider
 import org.oppia.android.app.application.ApplicationModule
 import org.oppia.android.app.application.ApplicationStartupListenerModule
 import org.oppia.android.app.application.testing.TestingBuildFlavorModule
+import org.oppia.android.app.customview.interaction.FractionInputInteractionView
+import org.oppia.android.app.customview.interaction.NumericInputInteractionView
+import org.oppia.android.app.customview.interaction.RatioInputInteractionView
+import org.oppia.android.app.customview.interaction.TextInputInteractionView
 import org.oppia.android.app.devoptions.DeveloperOptionsModule
 import org.oppia.android.app.devoptions.DeveloperOptionsStarterModule
 import org.oppia.android.app.model.OppiaLanguage
@@ -89,6 +99,7 @@ import org.oppia.android.app.player.state.itemviewmodel.StateItemViewModel.ViewT
 import org.oppia.android.app.player.state.itemviewmodel.StateItemViewModel.ViewType.NEXT_NAVIGATION_BUTTON
 import org.oppia.android.app.player.state.itemviewmodel.StateItemViewModel.ViewType.NUMERIC_EXPRESSION_INPUT_INTERACTION
 import org.oppia.android.app.player.state.itemviewmodel.StateItemViewModel.ViewType.NUMERIC_INPUT_INTERACTION
+import org.oppia.android.app.player.state.itemviewmodel.StateItemViewModel.ViewType.PREVIOUS_RESPONSES_HEADER
 import org.oppia.android.app.player.state.itemviewmodel.StateItemViewModel.ViewType.RATIO_EXPRESSION_INPUT_INTERACTION
 import org.oppia.android.app.player.state.itemviewmodel.StateItemViewModel.ViewType.RETURN_TO_TOPIC_NAVIGATION_BUTTON
 import org.oppia.android.app.player.state.itemviewmodel.StateItemViewModel.ViewType.SELECTION_INTERACTION
@@ -98,7 +109,6 @@ import org.oppia.android.app.player.state.itemviewmodel.StateItemViewModel.ViewT
 import org.oppia.android.app.player.state.testing.StateFragmentTestActivity
 import org.oppia.android.app.recyclerview.RecyclerViewMatcher.Companion.atPositionOnView
 import org.oppia.android.app.shim.ViewBindingShimModule
-import org.oppia.android.app.topic.PracticeTabModule
 import org.oppia.android.app.translation.testing.ActivityRecreatorTestModule
 import org.oppia.android.app.utility.ChildViewCoordinatesProvider
 import org.oppia.android.app.utility.CustomGeneralLocation
@@ -122,16 +132,16 @@ import org.oppia.android.domain.classify.rules.numericexpressioninput.NumericExp
 import org.oppia.android.domain.classify.rules.numericinput.NumericInputRuleModule
 import org.oppia.android.domain.classify.rules.ratioinput.RatioInputModule
 import org.oppia.android.domain.classify.rules.textinput.TextInputRuleModule
-import org.oppia.android.domain.exploration.lightweightcheckpointing.ExplorationStorageModule
+import org.oppia.android.domain.exploration.ExplorationStorageModule
 import org.oppia.android.domain.hintsandsolution.HintsAndSolutionConfigFastShowTestModule
 import org.oppia.android.domain.hintsandsolution.HintsAndSolutionProdModule
 import org.oppia.android.domain.onboarding.ExpirationMetaDataRetrieverModule
 import org.oppia.android.domain.oppialogger.LogStorageModule
 import org.oppia.android.domain.oppialogger.LoggingIdentifierModule
 import org.oppia.android.domain.oppialogger.analytics.ApplicationLifecycleModule
+import org.oppia.android.domain.oppialogger.analytics.CpuPerformanceSnapshotterModule
 import org.oppia.android.domain.oppialogger.logscheduler.MetricLogSchedulerModule
 import org.oppia.android.domain.oppialogger.loguploader.LogReportWorkerModule
-import org.oppia.android.domain.platformparameter.PlatformParameterModule
 import org.oppia.android.domain.platformparameter.PlatformParameterSingletonModule
 import org.oppia.android.domain.question.QuestionModule
 import org.oppia.android.domain.topic.FRACTIONS_EXPLORATION_ID_1
@@ -155,6 +165,7 @@ import org.oppia.android.testing.environment.TestEnvironmentConfig
 import org.oppia.android.testing.espresso.EditTextInputAction
 import org.oppia.android.testing.junit.InitializeDefaultLocaleRule
 import org.oppia.android.testing.lightweightcheckpointing.ExplorationCheckpointTestHelper
+import org.oppia.android.testing.platformparameter.TestPlatformParameterModule
 import org.oppia.android.testing.profile.ProfileTestHelper
 import org.oppia.android.testing.robolectric.IsOnRobolectric
 import org.oppia.android.testing.robolectric.RobolectricModule
@@ -233,6 +244,8 @@ class StateFragmentTest {
 
   @Before
   fun setUp() {
+    TestPlatformParameterModule.forceEnableInteractionConfigChangeStateRetention(true)
+    TestPlatformParameterModule.forceEnableHintBulbAnimation(false)
     Intents.init()
     setUpTestApplicationComponent()
     testCoroutineDispatchers.registerIdlingResource()
@@ -1587,6 +1600,304 @@ class StateFragmentTest {
         assertThat(textView.inputType)
           .isEqualTo(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE)
       }
+    }
+  }
+
+  @Test // TODO(#4692): Robolectric tests not working on screen rotation for input interactions
+  @RunOn(TestPlatform.ESPRESSO)
+  fun testStateFragment_fractionInput_retainStateOnConfigurationChange() {
+    launchForExploration(TEST_EXPLORATION_ID_2, shouldSavePartialProgress = false).use {
+      startPlayingExploration()
+      clickContinueInteractionButton()
+      // Entering text in Fraction Input Interaction.
+      typeFractionText("34k")
+      // Rotating device.
+      rotateToLandscape()
+      it.onActivity {
+        val fractionInputInteraction =
+          it.findViewById<FractionInputInteractionView>(R.id.fraction_input_interaction_view)
+        assertThat(fractionInputInteraction.text.toString()).isEqualTo("34k")
+      }
+      onView(withId(R.id.fraction_input_error)).check(matches(isDisplayed()))
+    }
+  }
+
+  @Test // TODO(#4692): Robolectric tests not working on screen rotation for input interactions
+  @RunOn(TestPlatform.ESPRESSO)
+  fun testStateFragment_numericInput_retainStateOnConfigurationChange() {
+    launchForExploration(TEST_EXPLORATION_ID_2, shouldSavePartialProgress = true).use {
+      startPlayingExploration()
+      playThroughPrototypeState1()
+      playThroughPrototypeState2()
+      playThroughPrototypeState3()
+      playThroughPrototypeState4()
+      playThroughPrototypeState5()
+      // Entering text in Numeric Input.
+      typeNumericInput("121")
+      // Rotating device.
+      rotateToLandscape()
+      it.onActivity {
+        val numericInputInteractionView =
+          it.findViewById<NumericInputInteractionView>(R.id.numeric_input_interaction_view)
+        assertThat(numericInputInteractionView.text.toString()).isEqualTo("121")
+      }
+    }
+  }
+
+  @Test // TODO(#4692): Robolectric tests not working on screen rotation for input interactions
+  @RunOn(TestPlatform.ESPRESSO)
+  fun testStateFragment_ratioInput_retainStateOnConfigurationChange() {
+    launchForExploration(TEST_EXPLORATION_ID_2, shouldSavePartialProgress = true).use {
+      startPlayingExploration()
+      playThroughPrototypeState1()
+      playThroughPrototypeState2()
+      playThroughPrototypeState3()
+      playThroughPrototypeState4()
+      playThroughPrototypeState5()
+      playThroughPrototypeState6()
+      // Entering text in Ratio Input Interaction.
+      typeRatioExpression("3a:5")
+      // Rotating device.
+      rotateToLandscape()
+      it.onActivity {
+        val ratioInputInteraction =
+          it.findViewById<RatioInputInteractionView>(R.id.ratio_input_interaction_view)
+        assertThat(ratioInputInteraction.text.toString()).isEqualTo("3a:5")
+      }
+      onView(withId(R.id.ratio_input_error)).check(matches(isDisplayed()))
+    }
+  }
+
+  @Test // TODO(#4692): Robolectric tests not working on screen rotation for input interactions
+  @RunOn(TestPlatform.ESPRESSO)
+  fun testStateFragment_textInput_retainStateOnConfigurationChange() {
+    launchForExploration(TEST_EXPLORATION_ID_2, shouldSavePartialProgress = true).use {
+      startPlayingExploration()
+      playThroughPrototypeState1()
+      playThroughPrototypeState2()
+      playThroughPrototypeState3()
+      playThroughPrototypeState4()
+      playThroughPrototypeState5()
+      playThroughPrototypeState6()
+      playThroughPrototypeState7()
+      // Enter text in Text Input Interaction.
+      typeTextInput("finnish")
+      // Rotating device.
+      rotateToLandscape()
+      it.onActivity {
+        val textInputInteraction =
+          it.findViewById<TextInputInteractionView>(R.id.text_input_interaction_view)
+        assertThat(textInputInteraction.text.toString()).isEqualTo("finnish")
+      }
+    }
+  }
+
+  @Test // TODO(#4692): Robolectric tests not working on screen rotation for input interactions
+  @RunOn(TestPlatform.ESPRESSO)
+  fun testStateFragment_selectionInteraction_ratioButton_retainStateOnConfigurationChange() {
+    launchForExploration(TEST_EXPLORATION_ID_2, shouldSavePartialProgress = false).use {
+      startPlayingExploration()
+      playThroughPrototypeState1()
+      playThroughPrototypeState2()
+      // Select answer.
+      selectMultipleChoiceOption(optionPosition = 2, expectedOptionText = "Eagle")
+      // Rotating device.
+      rotateToLandscape()
+      scrollToViewType(SELECTION_INTERACTION)
+      onView(
+        atPositionOnView(
+          recyclerViewId = R.id.selection_interaction_recyclerview,
+          position = 2,
+          targetViewId = R.id.multiple_choice_radio_button
+        )
+      ).check(matches(isChecked()))
+    }
+  }
+
+  @Test // TODO(#4692): Robolectric tests not working on screen rotation for input interactions
+  @RunOn(TestPlatform.ESPRESSO)
+  fun testStateFragment_selectionInteraction_multipleSelection_retainStateOnConfigurationChange() {
+    launchForExploration(TEST_EXPLORATION_ID_2, shouldSavePartialProgress = false).use {
+      startPlayingExploration()
+      playThroughPrototypeState1()
+      playThroughPrototypeState2()
+      playThroughPrototypeState3()
+      playThroughPrototypeState4()
+      // Select answer.
+      selectItemSelectionCheckbox(optionPosition = 0, expectedOptionText = "Red")
+      selectItemSelectionCheckbox(optionPosition = 2, expectedOptionText = "Green")
+      selectItemSelectionCheckbox(optionPosition = 3, expectedOptionText = "Blue")
+      // Rotating device.
+      rotateToLandscape()
+      scrollToViewType(SELECTION_INTERACTION)
+      onView(
+        atPositionOnView(
+          recyclerViewId = R.id.selection_interaction_recyclerview,
+          position = 0,
+          targetViewId = R.id.item_selection_checkbox
+        )
+      ).check(matches(isChecked()))
+      onView(
+        atPositionOnView(
+          recyclerViewId = R.id.selection_interaction_recyclerview,
+          position = 2,
+          targetViewId = R.id.item_selection_checkbox
+        )
+      ).check(matches(isChecked()))
+      onView(
+        atPositionOnView(
+          recyclerViewId = R.id.selection_interaction_recyclerview,
+          position = 3,
+          targetViewId = R.id.item_selection_checkbox
+        )
+      ).check(matches(isChecked()))
+    }
+  }
+
+  @Test // TODO(#4692): Robolectric tests not working on screen rotation for input interactions
+  @RunOn(TestPlatform.ESPRESSO)
+  fun testStateFragment_dragAndDrop_retainStateOnConfigurationChange() {
+    launchForExploration(TEST_EXPLORATION_ID_2, shouldSavePartialProgress = false).use {
+      startPlayingExploration()
+      playThroughPrototypeState1()
+      playThroughPrototypeState2()
+      playThroughPrototypeState3()
+      playThroughPrototypeState4()
+      playThroughPrototypeState5()
+      playThroughPrototypeState6()
+      playThroughPrototypeState7()
+      playThroughPrototypeState8()
+
+      // Drag and drop interaction without grouping.
+      dragAndDropItem(fromPosition = 0, toPosition = 3)
+      // Rotating device.
+      rotateToLandscape()
+      onView(
+        atPositionOnView(
+          recyclerViewId = R.id.drag_drop_interaction_recycler_view,
+          position = 3,
+          targetViewId = R.id.drag_drop_content_text_view
+        )
+      ).check(matches(withText(containsString("0.35"))))
+    }
+  }
+
+  @Test // TODO(#4692): Robolectric tests not working on screen rotation for input interactions
+  @RunOn(TestPlatform.ESPRESSO)
+  fun testStateFragment_dragAndDrop_mergeFirstTwoItems_dragItem_retainStateOnConfigurationChange() {
+    launchForExploration(TEST_EXPLORATION_ID_4, shouldSavePartialProgress = false).use {
+      startPlayingExploration()
+
+      mergeDragAndDropItems(position = 0)
+      dragAndDropItem(fromPosition = 0, toPosition = 2)
+
+      // Rotating device.
+      rotateToLandscape()
+      scrollToViewType(DRAG_DROP_SORT_INTERACTION)
+      onView(
+        atPositionOnView(
+          recyclerViewId = R.id.drag_drop_interaction_recycler_view,
+          position = 2,
+          targetViewId = R.id.drag_drop_item_recyclerview
+        )
+      ).check(matches(hasChildCount(2)))
+      onView(
+        atPositionOnView(
+          recyclerViewId = R.id.drag_drop_interaction_recycler_view,
+          position = 2,
+          targetViewId = R.id.drag_drop_item_recyclerview
+        )
+      ).check { view, _ ->
+        val textView = view.findViewById<TextView>(R.id.drag_drop_content_text_view)
+        assertThat(textView.text.toString(), containsString("a camera at the store"))
+      }
+    }
+  }
+
+  @Test // TODO(#4692): Robolectric tests not working on screen rotation for input interactions
+  @RunOn(TestPlatform.ESPRESSO)
+  fun testStateFragment_differentTextBasedInteractions_doesNotShareInitialState() {
+    launchForExploration(TEST_EXPLORATION_ID_2, shouldSavePartialProgress = false).use {
+      startPlayingExploration()
+      clickContinueInteractionButton()
+      // Entering text in Fraction Input Interaction.
+      typeFractionText("1/2")
+      // Rotating device.
+      rotateToLandscape()
+      it.onActivity {
+        val fractionInputInteraction =
+          it.findViewById<FractionInputInteractionView>(R.id.fraction_input_interaction_view)
+        assertThat(fractionInputInteraction.text.toString()).isEqualTo("1/2")
+      }
+      clickSubmitAnswerButton()
+      clickContinueNavigationButton()
+      playThroughPrototypeState3()
+      playThroughPrototypeState4()
+      playThroughPrototypeState5()
+
+      it.onActivity {
+        val numericInputInteractionView =
+          it.findViewById<NumericInputInteractionView>(R.id.numeric_input_interaction_view)
+        assertThat(numericInputInteractionView.text.toString().isEmpty()).isTrue()
+      }
+    }
+  }
+
+  @Test // TODO(#4692): Robolectric tests not working on screen rotation for input interactions
+  @RunOn(TestPlatform.ESPRESSO)
+  fun testStateFragment_checkPreviousHeaderExpanded_retainStateOnConfigChange() {
+    launchForExploration(TEST_EXPLORATION_ID_2, shouldSavePartialProgress = false).use {
+      startPlayingExploration()
+      clickContinueInteractionButton()
+
+      // Attempt to submit an wrong answer.
+      typeFractionText("1/4")
+      clickSubmitAnswerButton()
+
+      // Attempt to submit a second wrong answer.
+      typeFractionText("1/4")
+      clickSubmitAnswerButton()
+
+      // Expand previous response header.
+      scrollToViewType(PREVIOUS_RESPONSES_HEADER)
+      testCoroutineDispatchers.runCurrent()
+      onView(withId(R.id.previous_response_header)).perform(click())
+      testCoroutineDispatchers.runCurrent()
+
+      // Rotating device.
+      rotateToLandscape()
+
+      // Both failed answers should be showing.
+      onView(withId(R.id.state_recycler_view))
+        .check(
+          matchesChildren(matcher = withId(R.id.submitted_answer_container), times = 2)
+        )
+    }
+  }
+
+  @Test // TODO(#4692): Robolectric tests not working on screen rotation for input interactions
+  @RunOn(TestPlatform.ESPRESSO)
+  fun testStateFragment_checkPreviousHeaderCollapsed_retainStateOnConfigChange() {
+    launchForExploration(TEST_EXPLORATION_ID_2, shouldSavePartialProgress = false).use {
+      startPlayingExploration()
+      clickContinueInteractionButton()
+
+      // Attempt to submit an wrong answer.
+      typeFractionText("1/4")
+      clickSubmitAnswerButton()
+
+      // Attempt to submit a second wrong answer.
+      typeFractionText("1/4")
+      clickSubmitAnswerButton()
+
+      // Rotate screen (by default responses are collapsed).
+      rotateToLandscape()
+
+      // Only the latest failed answer should be showing.
+      onView(withId(R.id.state_recycler_view))
+        .check(
+          matchesChildren(matcher = withId(R.id.submitted_answer_container), times = 1)
+        )
     }
   }
 
@@ -4276,6 +4587,36 @@ class StateFragmentTest {
     return find { text in it.first }?.second
   }
 
+  private fun matchesChildren(matcher: Matcher<View>, times: Int): ViewAssertion {
+    return matches(
+      object : TypeSafeMatcher<View>() {
+        override fun describeTo(description: Description?) {
+          description
+            ?.appendDescriptionOf(matcher)
+            ?.appendText(" occurs times: $times in child views")
+        }
+
+        override fun matchesSafely(view: View?): Boolean {
+          if (view !is ViewGroup) {
+            throw PerformException.Builder()
+              .withCause(IllegalStateException("Expected to match against view group, not: $view"))
+              .build()
+          }
+          val matchingCount = view.children.filter(matcher::matches).count()
+          if (matchingCount != times) {
+            throw PerformException.Builder()
+              .withActionDescription("Expected to match $matcher against $times children")
+              .withViewDescription("$view")
+              .withCause(
+                IllegalStateException("Matched $matchingCount times in $view (expected $times)")
+              )
+              .build()
+          }
+          return true
+        }
+      })
+  }
+
   @Module
   class TestModule {
     @Provides
@@ -4299,7 +4640,8 @@ class StateFragmentTest {
   @Singleton
   @Component(
     modules = [
-      TestModule::class, RobolectricModule::class, PlatformParameterModule::class,
+      TestPlatformParameterModule::class,
+      TestModule::class, RobolectricModule::class,
       TestDispatcherModule::class, ApplicationModule::class, LoggerModule::class,
       ContinueModule::class, FractionInputModule::class, ItemSelectionInputModule::class,
       MultipleChoiceInputModule::class, NumberWithUnitsRuleModule::class,
@@ -4312,7 +4654,7 @@ class StateFragmentTest {
       RatioInputModule::class, ApplicationStartupListenerModule::class,
       HintsAndSolutionConfigFastShowTestModule::class, HintsAndSolutionProdModule::class,
       WorkManagerConfigurationModule::class, LogReportWorkerModule::class,
-      FirebaseLogUploaderModule::class, FakeOppiaClockModule::class, PracticeTabModule::class,
+      FirebaseLogUploaderModule::class, FakeOppiaClockModule::class,
       DeveloperOptionsStarterModule::class, DeveloperOptionsModule::class,
       ExplorationStorageModule::class, NetworkConnectionUtilDebugModule::class,
       NetworkConnectionDebugUtilModule::class, NetworkModule::class, NetworkConfigProdModule::class,
@@ -4322,7 +4664,8 @@ class StateFragmentTest {
       MathEquationInputModule::class, SplitScreenInteractionModule::class,
       LoggingIdentifierModule::class, ApplicationLifecycleModule::class,
       SyncStatusModule::class, MetricLogSchedulerModule::class, TestingBuildFlavorModule::class,
-      EventLoggingConfigurationModule::class
+      EventLoggingConfigurationModule::class, ActivityRouterModule::class,
+      CpuPerformanceSnapshotterModule::class
     ]
   )
   interface TestApplicationComponent : ApplicationComponent {

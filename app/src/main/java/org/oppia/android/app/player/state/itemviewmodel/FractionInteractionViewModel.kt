@@ -5,12 +5,13 @@ import android.text.TextWatcher
 import androidx.databinding.Observable
 import androidx.databinding.ObservableField
 import org.oppia.android.R
+import org.oppia.android.app.model.AnswerErrorCategory
 import org.oppia.android.app.model.Interaction
 import org.oppia.android.app.model.InteractionObject
+import org.oppia.android.app.model.RawUserAnswer
 import org.oppia.android.app.model.UserAnswer
 import org.oppia.android.app.model.WrittenTranslationContext
 import org.oppia.android.app.parser.FractionParsingUiError
-import org.oppia.android.app.player.state.answerhandling.AnswerErrorCategory
 import org.oppia.android.app.player.state.answerhandling.InteractionAnswerErrorOrAvailabilityCheckReceiver
 import org.oppia.android.app.player.state.answerhandling.InteractionAnswerHandler
 import org.oppia.android.app.player.state.answerhandling.InteractionAnswerReceiver
@@ -22,6 +23,7 @@ import javax.inject.Inject
 /** [StateItemViewModel] for the fraction input interaction. */
 class FractionInteractionViewModel private constructor(
   interaction: Interaction,
+  rawUserAnswer: RawUserAnswer,
   val hasConversationView: Boolean,
   val isSplitView: Boolean,
   private val errorOrAvailabilityCheckReceiver: InteractionAnswerErrorOrAvailabilityCheckReceiver,
@@ -30,12 +32,12 @@ class FractionInteractionViewModel private constructor(
   private val translationController: TranslationController
 ) : StateItemViewModel(ViewType.FRACTION_INPUT_INTERACTION), InteractionAnswerHandler {
   private var pendingAnswerError: String? = null
-  var answerText: CharSequence = ""
+  var answerText: CharSequence = rawUserAnswer.textualAnswer
   var isAnswerAvailable = ObservableField<Boolean>(false)
   var errorMessage = ObservableField<String>("")
-
   val hintText: CharSequence = deriveHintText(interaction)
   private val fractionParser = FractionParser()
+  private var currentErrorCategory = AnswerErrorCategory.NO_ERROR
 
   init {
     val callback: Observable.OnPropertyChangedCallback =
@@ -65,24 +67,34 @@ class FractionInteractionViewModel private constructor(
   /** It checks the pending error for the current fraction input, and correspondingly updates the error string based on the specified error category. */
   override fun checkPendingAnswerError(category: AnswerErrorCategory): String? {
     if (answerText.isNotEmpty()) {
-      when (category) {
+      pendingAnswerError = when (category) {
         AnswerErrorCategory.REAL_TIME -> {
-          pendingAnswerError =
-            FractionParsingUiError.createFromParsingError(
-              fractionParser.getRealTimeAnswerError(answerText.toString())
-            ).getErrorMessageFromStringRes(resourceHandler)
+          FractionParsingUiError.createFromParsingError(
+            fractionParser.getRealTimeAnswerError(answerText.toString())
+          ).getErrorMessageFromStringRes(resourceHandler)
         }
         AnswerErrorCategory.SUBMIT_TIME -> {
-          pendingAnswerError =
-            FractionParsingUiError.createFromParsingError(
-              fractionParser.getSubmitTimeError(answerText.toString())
-            ).getErrorMessageFromStringRes(resourceHandler)
+          FractionParsingUiError.createFromParsingError(
+            fractionParser.getSubmitTimeError(answerText.toString())
+          ).getErrorMessageFromStringRes(resourceHandler)
         }
+        AnswerErrorCategory.ANSWER_ERROR_CATEGORY_UNSPECIFIED, AnswerErrorCategory.UNRECOGNIZED,
+        AnswerErrorCategory.NO_ERROR -> null
       }
+      currentErrorCategory = if (pendingAnswerError == null) {
+        AnswerErrorCategory.NO_ERROR
+      } else category
       errorMessage.set(pendingAnswerError)
     }
     return pendingAnswerError
   }
+
+  override fun getRawUserAnswer(): RawUserAnswer = RawUserAnswer.newBuilder().apply {
+    if (answerText.isNotEmpty()) {
+      textualAnswer = answerText.toString()
+      lastErrorCategory = currentErrorCategory
+    }
+  }.build()
 
   fun getAnswerTextWatcher(): TextWatcher {
     return object : TextWatcher {
@@ -136,6 +148,7 @@ class FractionInteractionViewModel private constructor(
     override fun create(
       entityId: String,
       hasConversationView: Boolean,
+      rawUserAnswer: RawUserAnswer,
       interaction: Interaction,
       interactionAnswerReceiver: InteractionAnswerReceiver,
       answerErrorReceiver: InteractionAnswerErrorOrAvailabilityCheckReceiver,
@@ -145,6 +158,7 @@ class FractionInteractionViewModel private constructor(
     ): StateItemViewModel {
       return FractionInteractionViewModel(
         interaction,
+        rawUserAnswer,
         hasConversationView,
         isSplitView,
         answerErrorReceiver,

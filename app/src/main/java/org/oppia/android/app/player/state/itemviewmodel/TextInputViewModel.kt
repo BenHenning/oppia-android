@@ -5,8 +5,10 @@ import android.text.TextWatcher
 import androidx.databinding.Observable
 import androidx.databinding.ObservableField
 import org.oppia.android.R
+import org.oppia.android.app.model.AnswerErrorCategory
 import org.oppia.android.app.model.Interaction
 import org.oppia.android.app.model.InteractionObject
+import org.oppia.android.app.model.RawUserAnswer
 import org.oppia.android.app.model.UserAnswer
 import org.oppia.android.app.model.WrittenTranslationContext
 import org.oppia.android.app.player.state.answerhandling.InteractionAnswerErrorOrAvailabilityCheckReceiver
@@ -20,13 +22,14 @@ import javax.inject.Inject
 class TextInputViewModel private constructor(
   interaction: Interaction,
   val hasConversationView: Boolean,
+  rawUserAnswer: RawUserAnswer,
   private val interactionAnswerErrorOrAvailabilityCheckReceiver: InteractionAnswerErrorOrAvailabilityCheckReceiver, // ktlint-disable max-line-length
   val isSplitView: Boolean,
   private val writtenTranslationContext: WrittenTranslationContext,
   private val resourceHandler: AppLanguageResourceHandler,
   private val translationController: TranslationController
 ) : StateItemViewModel(ViewType.TEXT_INPUT_INTERACTION), InteractionAnswerHandler {
-  var answerText: CharSequence = ""
+  var answerText: CharSequence = rawUserAnswer.textualAnswer
   val hintText: CharSequence = deriveHintText(interaction)
 
   var isAnswerAvailable = ObservableField<Boolean>(false)
@@ -73,6 +76,13 @@ class TextInputViewModel private constructor(
     }
   }.build()
 
+  override fun getRawUserAnswer(): RawUserAnswer = RawUserAnswer.newBuilder().apply {
+    if (answerText.isNotEmpty()) {
+      textualAnswer = answerText.toString()
+    }
+    lastErrorCategory = AnswerErrorCategory.NO_ERROR
+  }.build()
+
   private fun deriveHintText(interaction: Interaction): CharSequence {
     // The subtitled unicode can apparently exist in the structure in two different formats.
     val placeholderUnicodeOption1 =
@@ -102,6 +112,7 @@ class TextInputViewModel private constructor(
     override fun create(
       entityId: String,
       hasConversationView: Boolean,
+      rawUserAnswer: RawUserAnswer,
       interaction: Interaction,
       interactionAnswerReceiver: InteractionAnswerReceiver,
       answerErrorReceiver: InteractionAnswerErrorOrAvailabilityCheckReceiver,
@@ -112,6 +123,7 @@ class TextInputViewModel private constructor(
       return TextInputViewModel(
         interaction,
         hasConversationView,
+        rawUserAnswer,
         answerErrorReceiver,
         isSplitView,
         writtenTranslationContext,

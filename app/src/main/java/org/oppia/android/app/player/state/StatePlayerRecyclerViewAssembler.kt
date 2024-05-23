@@ -25,6 +25,7 @@ import org.oppia.android.app.model.EphemeralState.StateTypeCase
 import org.oppia.android.app.model.HelpIndex
 import org.oppia.android.app.model.Interaction
 import org.oppia.android.app.model.ProfileId
+import org.oppia.android.app.model.RawUserAnswer
 import org.oppia.android.app.model.StringList
 import org.oppia.android.app.model.SubtitledHtml
 import org.oppia.android.app.model.UserAnswer
@@ -144,7 +145,9 @@ class StatePlayerRecyclerViewAssembler private constructor(
   backgroundCoroutineDispatcher: CoroutineDispatcher,
   private val hasConversationView: Boolean,
   private val resourceHandler: AppLanguageResourceHandler,
-  private val translationController: TranslationController
+  private val translationController: TranslationController,
+  private var rawUserAnswer: RawUserAnswer,
+  arePreviousResponsesExpanded: Boolean
 ) : HtmlParser.CustomOppiaTagActionListener {
   /**
    * A list of view models corresponding to past view models that are hidden by default. These are
@@ -158,7 +161,8 @@ class StatePlayerRecyclerViewAssembler private constructor(
    * Whether the previously submitted wrong answers should be expanded. This value is intentionally
    * not retained upon configuration changes since the user can just re-expand the list.
    */
-  private var hasPreviousResponsesExpanded: Boolean = false
+  var arePreviousResponsesExpanded: Boolean = arePreviousResponsesExpanded
+    private set
 
   private val lifecycleSafeTimerFactory = LifecycleSafeTimerFactory(backgroundCoroutineDispatcher)
 
@@ -300,6 +304,13 @@ class StatePlayerRecyclerViewAssembler private constructor(
     return Pair(conversationPendingItemList, extraInteractionPendingItemList)
   }
 
+  /**
+   * Resets rawUserAnswer to it's default instance.
+   */
+  fun resetRawUserAnswer() {
+    rawUserAnswer = RawUserAnswer.getDefaultInstance()
+  }
+
   private fun addInteractionForPendingState(
     pendingItemList: MutableList<StateItemViewModel>,
     interaction: Interaction,
@@ -311,13 +322,17 @@ class StatePlayerRecyclerViewAssembler private constructor(
     pendingItemList += interactionViewModelFactory.create(
       gcsEntityId,
       hasConversationView,
+      rawUserAnswer,
       interaction,
       fragment as InteractionAnswerReceiver,
       fragment as InteractionAnswerErrorOrAvailabilityCheckReceiver,
       hasPreviousButton,
       isSplitView.get()!!,
       writtenTranslationContext
-    )
+    ).also {
+      // Ensure that potential errors are re-detected in cases of configuration changes.
+      (it as? InteractionAnswerHandler)?.checkPendingAnswerError(rawUserAnswer.lastErrorCategory)
+    }
   }
 
   private fun addContentItem(
@@ -353,7 +368,7 @@ class StatePlayerRecyclerViewAssembler private constructor(
         PreviousResponsesHeaderViewModel(
           answersAndResponses.size - 1,
           hasConversationView,
-          ObservableBoolean(hasPreviousResponsesExpanded),
+          ObservableBoolean(arePreviousResponsesExpanded),
           fragment as PreviousResponsesHeaderClickListener,
           isSplitView.get()!!,
           resourceHandler
@@ -364,7 +379,7 @@ class StatePlayerRecyclerViewAssembler private constructor(
       }
       // Only add previous answers if current responses are expanded, or if collapsing is disabled.
       val showPreviousAnswers = !playerFeatureSet.wrongAnswerCollapsing ||
-        hasPreviousResponsesExpanded
+        arePreviousResponsesExpanded
       for (answerAndResponse in answersAndResponses.take(answersAndResponses.size - 1)) {
         if (playerFeatureSet.pastAnswerSupport) {
           // Earlier answers can't be correct (since otherwise new answers wouldn't be able to be
@@ -442,7 +457,7 @@ class StatePlayerRecyclerViewAssembler private constructor(
     }
     // Ensure the header matches the updated state.
     headerModel.isExpanded.set(expandPreviousAnswers)
-    hasPreviousResponsesExpanded = expandPreviousAnswers
+    arePreviousResponsesExpanded = expandPreviousAnswers
   }
 
   /**
@@ -454,7 +469,7 @@ class StatePlayerRecyclerViewAssembler private constructor(
     check(playerFeatureSet.wrongAnswerCollapsing) {
       "Cannot collapse previous answers for assembler that doesn't support wrong answer collapsing"
     }
-    hasPreviousResponsesExpanded = false
+    arePreviousResponsesExpanded = false
   }
 
   /**
@@ -887,11 +902,15 @@ class StatePlayerRecyclerViewAssembler private constructor(
     private val interactionViewModelFactoryMap: Map<String, InteractionItemFactory>,
     private val backgroundCoroutineDispatcher: CoroutineDispatcher,
     private val resourceHandler: AppLanguageResourceHandler,
-    private val translationController: TranslationController
+    private val translationController: TranslationController,
+    private val multiTypeBuilderFactory: BindableAdapter.MultiTypeBuilder.Factory,
+    private val singleTypeBuilderFactory: BindableAdapter.SingleTypeBuilder.Factory,
+    private val rawUserAnswer: RawUserAnswer,
+    private val arePreviousResponsesExpanded: Boolean
   ) {
-    private val adapterBuilder = BindableAdapter.MultiTypeBuilder.newBuilder(
-      StateItemViewModel::viewType
-    )
+
+    private val adapterBuilder: BindableAdapter.MultiTypeBuilder<StateItemViewModel,
+      StateItemViewModel.ViewType> = multiTypeBuilderFactory.create { it.viewType }
 
     /**
      * Tracks features individually enabled for the assembler. No features are enabled by default.
@@ -1119,8 +1138,7 @@ class StatePlayerRecyclerViewAssembler private constructor(
       gcsEntityId: String,
       supportsConceptCards: Boolean
     ): BindableAdapter<StringList> {
-      return BindableAdapter.SingleTypeBuilder
-        .newBuilder<StringList>()
+      return singleTypeBuilderFactory.create<StringList>()
         .registerViewBinder(
           inflateView = { parent ->
             SubmittedAnswerListItemBinding.inflate(
@@ -1141,8 +1159,7 @@ class StatePlayerRecyclerViewAssembler private constructor(
       gcsEntityId: String,
       supportsConceptCards: Boolean
     ): BindableAdapter<String> {
-      return BindableAdapter.SingleTypeBuilder
-        .newBuilder<String>()
+      return singleTypeBuilderFactory.create<String>()
         .registerViewBinder(
           inflateView = { parent ->
             SubmittedHtmlAnswerItemBinding.inflate(
@@ -1375,7 +1392,9 @@ class StatePlayerRecyclerViewAssembler private constructor(
         backgroundCoroutineDispatcher,
         hasConversationView,
         resourceHandler,
-        translationController
+        translationController,
+        rawUserAnswer,
+        arePreviousResponsesExpanded
       )
       if (playerFeatureSet.conceptCardSupport) {
         customTagListener.proxyListener = assembler
@@ -1393,13 +1412,21 @@ class StatePlayerRecyclerViewAssembler private constructor(
         String, @JvmSuppressWildcards InteractionItemFactory>,
       @BackgroundDispatcher private val backgroundCoroutineDispatcher: CoroutineDispatcher,
       private val resourceHandler: AppLanguageResourceHandler,
-      private val translationController: TranslationController
+      private val translationController: TranslationController,
+      private val multiAdapterBuilderFactory: BindableAdapter.MultiTypeBuilder.Factory,
+      private val singleAdapterFactory: BindableAdapter.SingleTypeBuilder.Factory,
     ) {
       /**
        * Returns a new [Builder] for the specified GCS resource bucket information for loading
        * assets, and the current logged in [ProfileId].
        */
-      fun create(resourceBucketName: String, entityType: String, profileId: ProfileId): Builder {
+      fun create(
+        resourceBucketName: String,
+        entityType: String,
+        profileId: ProfileId,
+        rawUserAnswer: RawUserAnswer,
+        arePreviousResponsesExpanded: Boolean
+      ): Builder {
         return Builder(
           accessibilityService,
           htmlParserFactory,
@@ -1411,7 +1438,11 @@ class StatePlayerRecyclerViewAssembler private constructor(
           interactionViewModelFactoryMap,
           backgroundCoroutineDispatcher,
           resourceHandler,
-          translationController
+          translationController,
+          multiAdapterBuilderFactory,
+          singleAdapterFactory,
+          rawUserAnswer,
+          arePreviousResponsesExpanded
         )
       }
     }

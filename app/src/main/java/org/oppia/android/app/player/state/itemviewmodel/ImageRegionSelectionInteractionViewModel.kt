@@ -3,10 +3,12 @@ package org.oppia.android.app.player.state.itemviewmodel
 import androidx.databinding.Observable
 import androidx.databinding.ObservableField
 import org.oppia.android.R
+import org.oppia.android.app.model.AnswerErrorCategory
 import org.oppia.android.app.model.ClickOnImage
-import org.oppia.android.app.model.ImageWithRegions
+import org.oppia.android.app.model.ImageWithRegions.LabeledRegion
 import org.oppia.android.app.model.Interaction
 import org.oppia.android.app.model.InteractionObject
+import org.oppia.android.app.model.RawUserAnswer
 import org.oppia.android.app.model.UserAnswer
 import org.oppia.android.app.model.WrittenTranslationContext
 import org.oppia.android.app.player.state.answerhandling.InteractionAnswerErrorOrAvailabilityCheckReceiver
@@ -23,6 +25,7 @@ import javax.inject.Inject
 class ImageRegionSelectionInteractionViewModel private constructor(
   val entityId: String,
   val hasConversationView: Boolean,
+  rawUserAnswer: RawUserAnswer,
   interaction: Interaction,
   private val errorOrAvailabilityCheckReceiver: InteractionAnswerErrorOrAvailabilityCheckReceiver,
   val isSplitView: Boolean,
@@ -32,7 +35,7 @@ class ImageRegionSelectionInteractionViewModel private constructor(
   InteractionAnswerHandler,
   OnClickableAreaClickedListener {
   var answerText: CharSequence = ""
-  val selectableRegions: List<ImageWithRegions.LabeledRegion> by lazy {
+  val selectableRegions: List<LabeledRegion> by lazy {
     val schemaObject = interaction.customizationArgsMap["imageAndRegions"]
     schemaObject?.customSchemaValue?.imageWithRegions?.labelRegionsList ?: listOf()
   }
@@ -41,8 +44,8 @@ class ImageRegionSelectionInteractionViewModel private constructor(
     val schemaObject = interaction.customizationArgsMap["imageAndRegions"]
     schemaObject?.customSchemaValue?.imageWithRegions?.imagePath ?: ""
   }
-
   val isAnswerAvailable = ObservableField<Boolean>(false)
+  val lastSelectedRegion = ObservableField<LabeledRegion>(rawUserAnswer.imageRegionSelection)
 
   init {
     val callback: Observable.OnPropertyChangedCallback =
@@ -83,12 +86,20 @@ class ImageRegionSelectionInteractionViewModel private constructor(
       this@ImageRegionSelectionInteractionViewModel.writtenTranslationContext
   }.build()
 
+  override fun getRawUserAnswer(): RawUserAnswer = RawUserAnswer.newBuilder().apply {
+    if (answerText.isNotEmpty()) {
+      imageRegionSelection = selectableRegions.find { it.label == answerText.toString() }
+    }
+    lastErrorCategory = AnswerErrorCategory.NO_ERROR
+  }.build()
+
   private fun parseClickOnImage(answerTextString: String): ClickOnImage {
     val region = selectableRegions.find { it.label == answerTextString }
-    return ClickOnImage.newBuilder()
-      // The object supports multiple regions in an answer, but neither web nor Android supports this.
-      .addClickedRegions(region?.label ?: "")
-      .build()
+    return ClickOnImage.newBuilder().apply {
+      // The object supports multiple regions in an answer, but neither web nor Android
+      // supports this.
+      addClickedRegions(region?.label ?: "")
+    }.build()
   }
 
   /** Implementation of [StateItemViewModel.InteractionItemFactory] for this view model. */
@@ -98,6 +109,7 @@ class ImageRegionSelectionInteractionViewModel private constructor(
     override fun create(
       entityId: String,
       hasConversationView: Boolean,
+      rawUserAnswer: RawUserAnswer,
       interaction: Interaction,
       interactionAnswerReceiver: InteractionAnswerReceiver,
       answerErrorReceiver: InteractionAnswerErrorOrAvailabilityCheckReceiver,
@@ -108,6 +120,7 @@ class ImageRegionSelectionInteractionViewModel private constructor(
       return ImageRegionSelectionInteractionViewModel(
         entityId,
         hasConversationView,
+        rawUserAnswer,
         interaction,
         answerErrorReceiver,
         isSplitView,

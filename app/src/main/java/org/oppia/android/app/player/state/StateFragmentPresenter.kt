@@ -24,6 +24,7 @@ import org.oppia.android.app.model.CheckpointState
 import org.oppia.android.app.model.EphemeralState
 import org.oppia.android.app.model.HelpIndex
 import org.oppia.android.app.model.ProfileId
+import org.oppia.android.app.model.RawUserAnswer
 import org.oppia.android.app.model.State
 import org.oppia.android.app.model.UserAnswer
 import org.oppia.android.app.player.audio.AudioButtonListener
@@ -47,6 +48,9 @@ import org.oppia.android.util.data.DataProvider
 import org.oppia.android.util.data.DataProviders.Companion.toLiveData
 import org.oppia.android.util.gcsresource.DefaultResourceBucketName
 import org.oppia.android.util.parser.html.ExplorationHtmlParserEntityType
+import org.oppia.android.util.platformparameter.EnableHintBulbAnimation
+import org.oppia.android.util.platformparameter.EnableInteractionConfigChangeStateRetention
+import org.oppia.android.util.platformparameter.PlatformParameterValue
 import org.oppia.android.util.system.OppiaClock
 import javax.inject.Inject
 
@@ -71,6 +75,10 @@ class StateFragmentPresenter @Inject constructor(
   private val storyProgressController: StoryProgressController,
   private val oppiaLogger: OppiaLogger,
   @DefaultResourceBucketName private val resourceBucketName: String,
+  @EnableInteractionConfigChangeStateRetention
+  private val isConfigChangeStateRetentionEnabled: PlatformParameterValue<Boolean>,
+  @EnableHintBulbAnimation
+  private val isHintBulbAnimationEnabled: PlatformParameterValue<Boolean>,
   private val assemblerBuilderFactory: StatePlayerRecyclerViewAssembler.Builder.Factory,
   private val splitScreenManager: SplitScreenManager,
   private val oppiaClock: OppiaClock
@@ -105,6 +113,8 @@ class StateFragmentPresenter @Inject constructor(
     internalProfileId: Int,
     topicId: String,
     storyId: String,
+    rawUserAnswer: RawUserAnswer,
+    arePreviousResponsesExpanded: Boolean,
     explorationId: String
   ): View? {
     profileId = ProfileId.newBuilder().setInternalId(internalProfileId).build()
@@ -118,7 +128,13 @@ class StateFragmentPresenter @Inject constructor(
       /* attachToRoot= */ false
     )
     recyclerViewAssembler = createRecyclerViewAssembler(
-      assemblerBuilderFactory.create(resourceBucketName, entityType, profileId),
+      assemblerBuilderFactory.create(
+        resourceBucketName,
+        entityType,
+        profileId,
+        rawUserAnswer,
+        arePreviousResponsesExpanded
+      ),
       binding.congratulationsTextView,
       binding.congratulationsTextConfettiView,
       binding.fullScreenConfettiView
@@ -164,7 +180,7 @@ class StateFragmentPresenter @Inject constructor(
 
   fun handleAnswerReadyForSubmission(answer: UserAnswer) {
     // An interaction has indicated that an answer is ready for submission.
-    handleSubmitAnswer(answer)
+    handleSubmitAnswer(answer, canSubmitAnswer = true)
   }
 
   fun onContinueButtonClicked() {
@@ -208,9 +224,7 @@ class StateFragmentPresenter @Inject constructor(
 
   fun handleKeyboardAction() {
     hideKeyboard()
-    if (viewModel.getCanSubmitAnswer().get() == true) {
-      handleSubmitAnswer(viewModel.getPendingAnswer(recyclerViewAssembler::getPendingAnswerHandler))
-    }
+    handleSubmitAnswer(viewModel.getPendingAnswer(recyclerViewAssembler::getPendingAnswerHandler))
   }
 
   fun onHintAvailable(helpIndex: HelpIndex, isCurrentStatePendingState: Boolean) {
@@ -259,6 +273,11 @@ class StateFragmentPresenter @Inject constructor(
 
   fun revealSolution() {
     subscribeToHintSolution(explorationProgressController.submitSolutionIsRevealed())
+  }
+
+  /** Returns whether previously submitted wrong answers are currently expanded. */
+  fun getArePreviousResponsesExpanded(): Boolean {
+    return recyclerViewAssembler.arePreviousResponsesExpanded
   }
 
   private fun getStateViewModel(): StateViewModel {
@@ -358,6 +377,9 @@ class StateFragmentPresenter @Inject constructor(
   private fun subscribeToAnswerOutcome(
     answerOutcomeResultLiveData: LiveData<AsyncResult<AnswerOutcome>>
   ) {
+    if (viewModel.getCanSubmitAnswer().get() == true) {
+      recyclerViewAssembler.resetRawUserAnswer()
+    }
     val answerOutcomeLiveData = getAnswerOutcome(answerOutcomeResultLiveData)
     answerOutcomeLiveData.observe(
       fragment,
@@ -401,8 +423,15 @@ class StateFragmentPresenter @Inject constructor(
     }
   }
 
-  private fun handleSubmitAnswer(answer: UserAnswer) {
-    subscribeToAnswerOutcome(explorationProgressController.submitAnswer(answer).toLiveData())
+  private fun handleSubmitAnswer(
+    answer: UserAnswer,
+    canSubmitAnswer: Boolean = viewModel.getCanSubmitAnswer().get() ?: false
+  ) {
+    // This check seems to avoid a crash on configuration change when attempting to resubmit answers
+    // after encountering a submit-time error, but it's also more correct to keep it.
+    if (canSubmitAnswer) {
+      subscribeToAnswerOutcome(explorationProgressController.submitAnswer(answer).toLiveData())
+    }
   }
 
   fun dismissConceptCard() {
@@ -427,7 +456,7 @@ class StateFragmentPresenter @Inject constructor(
     val inputManager: InputMethodManager =
       activity.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
     inputManager.hideSoftInputFromWindow(
-      fragment.view!!.windowToken,
+      fragment.view?.windowToken,
       InputMethodManager.SHOW_FORCED
     )
   }
@@ -450,6 +479,13 @@ class StateFragmentPresenter @Inject constructor(
 
   /** Returns the checkpoint state for the current exploration. */
   fun getExplorationCheckpointState() = explorationCheckpointState
+
+  /** Returns the [RawUserAnswer] representing the user's current pending answer. */
+  fun getRawUserAnswer(): RawUserAnswer {
+    return if (isConfigChangeStateRetentionEnabled.value) {
+      viewModel.getRawUserAnswer(recyclerViewAssembler::getPendingAnswerHandler)
+    } else RawUserAnswer.getDefaultInstance()
+  }
 
   private fun markExplorationCompleted() {
     storyProgressController.recordCompletedChapter(
@@ -494,6 +530,8 @@ class StateFragmentPresenter @Inject constructor(
 
   private fun setHintOpenedAndUnRevealed(isHintUnrevealed: Boolean) {
     viewModel.setHintOpenedAndUnRevealedVisibility(isHintUnrevealed)
+    if (!isHintBulbAnimationEnabled.value) return
+
     if (isHintUnrevealed) {
       val hintBulbAnimation = AnimationUtils.loadAnimation(
         context,

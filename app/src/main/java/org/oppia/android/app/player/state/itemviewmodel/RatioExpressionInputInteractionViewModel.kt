@@ -5,12 +5,13 @@ import android.text.TextWatcher
 import androidx.databinding.Observable
 import androidx.databinding.ObservableField
 import org.oppia.android.R
+import org.oppia.android.app.model.AnswerErrorCategory
 import org.oppia.android.app.model.Interaction
 import org.oppia.android.app.model.InteractionObject
+import org.oppia.android.app.model.RawUserAnswer
 import org.oppia.android.app.model.UserAnswer
 import org.oppia.android.app.model.WrittenTranslationContext
 import org.oppia.android.app.parser.StringToRatioParser
-import org.oppia.android.app.player.state.answerhandling.AnswerErrorCategory
 import org.oppia.android.app.player.state.answerhandling.InteractionAnswerErrorOrAvailabilityCheckReceiver
 import org.oppia.android.app.player.state.answerhandling.InteractionAnswerHandler
 import org.oppia.android.app.player.state.answerhandling.InteractionAnswerReceiver
@@ -24,6 +25,7 @@ import javax.inject.Inject
 class RatioExpressionInputInteractionViewModel private constructor(
   interaction: Interaction,
   val hasConversationView: Boolean,
+  rawUserAnswer: RawUserAnswer,
   val isSplitView: Boolean,
   private val errorOrAvailabilityCheckReceiver: InteractionAnswerErrorOrAvailabilityCheckReceiver,
   private val writtenTranslationContext: WrittenTranslationContext,
@@ -31,9 +33,10 @@ class RatioExpressionInputInteractionViewModel private constructor(
   private val translationController: TranslationController
 ) : StateItemViewModel(ViewType.RATIO_EXPRESSION_INPUT_INTERACTION), InteractionAnswerHandler {
   private var pendingAnswerError: String? = null
-  var answerText: CharSequence = ""
+  var answerText: CharSequence = rawUserAnswer.textualAnswer
   var isAnswerAvailable = ObservableField<Boolean>(false)
   var errorMessage = ObservableField<String>("")
+  private var currentErrorCategory = AnswerErrorCategory.NO_ERROR
 
   val hintText: CharSequence = deriveHintText(interaction)
   private val stringToRatioParser: StringToRatioParser = StringToRatioParser()
@@ -50,6 +53,7 @@ class RatioExpressionInputInteractionViewModel private constructor(
           )
         }
       }
+
     errorMessage.addOnPropertyChangedCallback(callback)
     isAnswerAvailable.addOnPropertyChangedCallback(callback)
   }
@@ -67,21 +71,33 @@ class RatioExpressionInputInteractionViewModel private constructor(
     }
   }.build()
 
+  override fun getRawUserAnswer(): RawUserAnswer = RawUserAnswer.newBuilder().apply {
+    if (answerText.isNotEmpty()) {
+      textualAnswer = answerText.toString()
+    }
+    lastErrorCategory = currentErrorCategory
+  }.build()
+
   /** It checks the pending error for the current ratio input, and correspondingly updates the error string based on the specified error category. */
   override fun checkPendingAnswerError(category: AnswerErrorCategory): String? {
     if (answerText.isNotEmpty()) {
-      when (category) {
-        AnswerErrorCategory.REAL_TIME ->
-          pendingAnswerError =
-            stringToRatioParser.getRealTimeAnswerError(answerText.toString())
-              .getErrorMessageFromStringRes(resourceHandler)
-        AnswerErrorCategory.SUBMIT_TIME ->
-          pendingAnswerError =
-            stringToRatioParser.getSubmitTimeError(
-              answerText.toString(),
-              numberOfTerms = numberOfTerms
-            ).getErrorMessageFromStringRes(resourceHandler)
+      pendingAnswerError = when (category) {
+        AnswerErrorCategory.REAL_TIME -> {
+          stringToRatioParser.getRealTimeAnswerError(answerText.toString())
+            .getErrorMessageFromStringRes(resourceHandler)
+        }
+        AnswerErrorCategory.SUBMIT_TIME -> {
+          stringToRatioParser.getSubmitTimeError(
+            answerText.toString(),
+            numberOfTerms = numberOfTerms
+          ).getErrorMessageFromStringRes(resourceHandler)
+        }
+        AnswerErrorCategory.ANSWER_ERROR_CATEGORY_UNSPECIFIED, AnswerErrorCategory.UNRECOGNIZED,
+        AnswerErrorCategory.NO_ERROR -> null
       }
+      currentErrorCategory = if (pendingAnswerError == null) {
+        AnswerErrorCategory.NO_ERROR
+      } else category
       errorMessage.set(pendingAnswerError)
     }
     return pendingAnswerError
@@ -135,6 +151,7 @@ class RatioExpressionInputInteractionViewModel private constructor(
     override fun create(
       entityId: String,
       hasConversationView: Boolean,
+      rawUserAnswer: RawUserAnswer,
       interaction: Interaction,
       interactionAnswerReceiver: InteractionAnswerReceiver,
       answerErrorReceiver: InteractionAnswerErrorOrAvailabilityCheckReceiver,
@@ -145,6 +162,7 @@ class RatioExpressionInputInteractionViewModel private constructor(
       return RatioExpressionInputInteractionViewModel(
         interaction,
         hasConversationView,
+        rawUserAnswer,
         isSplitView,
         answerErrorReceiver,
         writtenTranslationContext,

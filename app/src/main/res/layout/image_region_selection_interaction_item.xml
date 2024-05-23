@@ -51,6 +51,7 @@
       app:clickableAreas="@{viewModel.selectableRegions}"
       app:entityId="@{viewModel.entityId}"
       app:imageUrl="@{viewModel.imagePath}"
+      app:lastSelectedRegion="@{viewModel.lastSelectedRegion}"
       app:onRegionClicked="@{(region) -> viewModel.onClickableAreaTouched(region)}"
       app:overlayView="@{interactionContainerFrameLayout}" />
 

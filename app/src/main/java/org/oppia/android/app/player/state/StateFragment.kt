@@ -8,6 +8,7 @@ import android.view.ViewGroup
 import org.oppia.android.app.fragment.FragmentComponentImpl
 import org.oppia.android.app.fragment.InjectableFragment
 import org.oppia.android.app.model.HelpIndex
+import org.oppia.android.app.model.RawUserAnswer
 import org.oppia.android.app.model.UserAnswer
 import org.oppia.android.app.player.state.answerhandling.InteractionAnswerErrorOrAvailabilityCheckReceiver
 import org.oppia.android.app.player.state.answerhandling.InteractionAnswerHandler
@@ -19,8 +20,14 @@ import org.oppia.android.app.player.state.listener.PreviousResponsesHeaderClickL
 import org.oppia.android.app.player.state.listener.ReturnToTopicNavigationButtonListener
 import org.oppia.android.app.player.state.listener.ShowHintAvailabilityListener
 import org.oppia.android.app.player.state.listener.SubmitNavigationButtonListener
+import org.oppia.android.util.extensions.getProto
 import org.oppia.android.util.extensions.getStringFromBundle
+import org.oppia.android.util.extensions.putProto
 import javax.inject.Inject
+
+private const val STATE_FRAGMENT_RAW_USER_ANSWER_KEY = "StateFragment.raw_user_answer"
+private const val STATE_FRAGMENT_ARE_PREVIOUS_RESPONSES_HEADER_EXPANDED_KEY =
+  "StateFragment.are_previous_responses_header_expanded"
 
 /** Fragment that represents the current state of an exploration. */
 class StateFragment :
@@ -79,12 +86,20 @@ class StateFragment :
     val storyId = arguments!!.getStringFromBundle(STATE_FRAGMENT_STORY_ID_ARGUMENT_KEY)!!
     val explorationId =
       arguments!!.getStringFromBundle(STATE_FRAGMENT_EXPLORATION_ID_ARGUMENT_KEY)!!
+    val rawUserAnswer = savedInstanceState?.getProto(
+      STATE_FRAGMENT_RAW_USER_ANSWER_KEY, RawUserAnswer.getDefaultInstance()
+    ) ?: RawUserAnswer.getDefaultInstance()
+    val arePreviousResponsesExpanded =
+      savedInstanceState?.getBoolean(STATE_FRAGMENT_ARE_PREVIOUS_RESPONSES_HEADER_EXPANDED_KEY)
+        ?: false
     return stateFragmentPresenter.handleCreateView(
       inflater,
       container,
       internalProfileId,
       topicId,
       storyId,
+      rawUserAnswer,
+      arePreviousResponsesExpanded,
       explorationId
     )
   }
@@ -127,6 +142,18 @@ class StateFragment :
 
   fun revealHint(hintIndex: Int) {
     stateFragmentPresenter.revealHint(hintIndex)
+  }
+
+  override fun onSaveInstanceState(outState: Bundle) {
+    super.onSaveInstanceState(outState)
+    outState.putProto(
+      STATE_FRAGMENT_RAW_USER_ANSWER_KEY,
+      stateFragmentPresenter.getRawUserAnswer()
+    )
+    outState.putBoolean(
+      STATE_FRAGMENT_ARE_PREVIOUS_RESPONSES_HEADER_EXPANDED_KEY,
+      stateFragmentPresenter.getArePreviousResponsesExpanded()
+    )
   }
 
   fun revealSolution() = stateFragmentPresenter.revealSolution()

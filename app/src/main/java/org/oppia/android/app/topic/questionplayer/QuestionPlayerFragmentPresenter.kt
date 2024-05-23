@@ -18,6 +18,7 @@ import org.oppia.android.app.model.EphemeralQuestion
 import org.oppia.android.app.model.EphemeralState
 import org.oppia.android.app.model.HelpIndex
 import org.oppia.android.app.model.ProfileId
+import org.oppia.android.app.model.RawUserAnswer
 import org.oppia.android.app.model.State
 import org.oppia.android.app.model.UserAnswer
 import org.oppia.android.app.player.state.ConfettiConfig.MINI_CONFETTI_BURST
@@ -35,6 +36,8 @@ import org.oppia.android.util.data.AsyncResult
 import org.oppia.android.util.data.DataProvider
 import org.oppia.android.util.data.DataProviders.Companion.toLiveData
 import org.oppia.android.util.gcsresource.QuestionResourceBucketName
+import org.oppia.android.util.platformparameter.EnableInteractionConfigChangeStateRetention
+import org.oppia.android.util.platformparameter.PlatformParameterValue
 import javax.inject.Inject
 
 /** The presenter for [QuestionPlayerFragment]. */
@@ -46,6 +49,8 @@ class QuestionPlayerFragmentPresenter @Inject constructor(
   private val questionAssessmentProgressController: QuestionAssessmentProgressController,
   private val oppiaLogger: OppiaLogger,
   @QuestionResourceBucketName private val resourceBucketName: String,
+  @EnableInteractionConfigChangeStateRetention
+  private val isConfigChangeStateRetentionEnabled: PlatformParameterValue<Boolean>,
   private val assemblerBuilderFactory: StatePlayerRecyclerViewAssembler.Builder.Factory,
   private val splitScreenManager: SplitScreenManager
 ) {
@@ -68,6 +73,8 @@ class QuestionPlayerFragmentPresenter @Inject constructor(
   fun handleCreateView(
     inflater: LayoutInflater,
     container: ViewGroup?,
+    rawUserAnswer: RawUserAnswer,
+    arePreviousResponsesExpanded: Boolean,
     profileId: ProfileId
   ): View? {
     binding = QuestionPlayerFragmentBinding.inflate(
@@ -77,9 +84,15 @@ class QuestionPlayerFragmentPresenter @Inject constructor(
     )
 
     recyclerViewAssembler = createRecyclerViewAssembler(
-      assemblerBuilderFactory.create(resourceBucketName, "skill", profileId),
+      assemblerBuilderFactory.create(
+        resourceBucketName,
+        "skill",
+        profileId,
+        rawUserAnswer,
+        arePreviousResponsesExpanded
+      ),
       binding.congratulationsTextView,
-      binding.congratulationsTextConfettiView
+      binding.congratulationsTextConfettiView,
     )
 
     binding.apply {
@@ -109,6 +122,11 @@ class QuestionPlayerFragmentPresenter @Inject constructor(
 
   fun revealSolution() {
     subscribeToHintSolution(questionAssessmentProgressController.submitSolutionIsRevealed())
+  }
+
+  /** Returns whether previously submitted wrong answers are currently expanded. */
+  fun getArePreviousResponsesExpanded(): Boolean {
+    return recyclerViewAssembler.arePreviousResponsesExpanded
   }
 
   fun dismissConceptCard() {
@@ -259,6 +277,9 @@ class QuestionPlayerFragmentPresenter @Inject constructor(
   private fun subscribeToAnswerOutcome(
     answerOutcomeResultLiveData: LiveData<AsyncResult<AnsweredQuestionOutcome>>
   ) {
+    if (questionViewModel.getCanSubmitAnswer().get() == true) {
+      recyclerViewAssembler.resetRawUserAnswer()
+    }
     val answerOutcomeLiveData =
       Transformations.map(answerOutcomeResultLiveData, ::processAnsweredQuestionOutcome)
     answerOutcomeLiveData.observe(
@@ -388,5 +409,12 @@ class QuestionPlayerFragmentPresenter @Inject constructor(
         }
       }
     }
+  }
+
+  /** Returns the [RawUserAnswer] representing the user's current pending answer. */
+  fun getRawUserAnswer(): RawUserAnswer {
+    return if (isConfigChangeStateRetentionEnabled.value) {
+      questionViewModel.getRawUserAnswer(recyclerViewAssembler::getPendingAnswerHandler)
+    } else RawUserAnswer.getDefaultInstance()
   }
 }

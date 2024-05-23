@@ -11,6 +11,7 @@ import org.oppia.android.app.activity.InjectableAppCompatActivity
 import org.oppia.android.app.customview.interaction.FractionInputInteractionView
 import org.oppia.android.app.customview.interaction.NumericInputInteractionView
 import org.oppia.android.app.customview.interaction.TextInputInteractionView
+import org.oppia.android.app.model.AnswerErrorCategory
 import org.oppia.android.app.model.InputInteractionViewTestActivityParams
 import org.oppia.android.app.model.InputInteractionViewTestActivityParams.MathInteractionType.ALGEBRAIC_EXPRESSION
 import org.oppia.android.app.model.InputInteractionViewTestActivityParams.MathInteractionType.MATH_EQUATION
@@ -18,10 +19,10 @@ import org.oppia.android.app.model.InputInteractionViewTestActivityParams.MathIn
 import org.oppia.android.app.model.InputInteractionViewTestActivityParams.MathInteractionType.NUMERIC_EXPRESSION
 import org.oppia.android.app.model.InputInteractionViewTestActivityParams.MathInteractionType.UNRECOGNIZED
 import org.oppia.android.app.model.Interaction
+import org.oppia.android.app.model.RawUserAnswer
 import org.oppia.android.app.model.SchemaObject
 import org.oppia.android.app.model.UserAnswer
 import org.oppia.android.app.model.WrittenTranslationContext
-import org.oppia.android.app.player.state.answerhandling.AnswerErrorCategory
 import org.oppia.android.app.player.state.answerhandling.InteractionAnswerErrorOrAvailabilityCheckReceiver
 import org.oppia.android.app.player.state.answerhandling.InteractionAnswerReceiver
 import org.oppia.android.app.player.state.itemviewmodel.FractionInteractionViewModel
@@ -158,6 +159,7 @@ class InputInteractionViewTestActivity :
     return create(
       entityId = "fake_entity_id",
       hasConversationView = false,
+      rawUserAnswer = RawUserAnswer.getDefaultInstance(),
       interaction = interaction,
       interactionAnswerReceiver = this@InputInteractionViewTestActivity,
       answerErrorReceiver = this@InputInteractionViewTestActivity,
