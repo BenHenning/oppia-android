@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.transform
 import kotlinx.coroutines.launch
 import org.oppia.android.app.model.EventLog
 import org.oppia.android.app.model.EventLog.Priority
+import org.oppia.android.app.model.FeatureFlagId.LEARNER_STUDY_ANALYTICS
 import org.oppia.android.app.model.OppiaEventLogs
 import org.oppia.android.app.model.ProfileId
 import org.oppia.android.data.backends.gae.NetworkLoggingInterceptor
@@ -24,6 +25,7 @@ import org.oppia.android.data.persistence.PersistentCacheStore.PublishMode.PUBLI
 import org.oppia.android.data.persistence.PersistentCacheStore.UpdateMode.UPDATE_IF_NEW_CACHE
 import org.oppia.android.domain.oppialogger.EventLogStorageCacheSize
 import org.oppia.android.domain.oppialogger.OppiaLogger
+import org.oppia.android.domain.platformparameter.FeatureFlag
 import org.oppia.android.domain.translation.TranslationController
 import org.oppia.android.util.data.AsyncResult
 import org.oppia.android.util.data.DataProvider
@@ -34,8 +36,6 @@ import org.oppia.android.util.logging.ExceptionLogger
 import org.oppia.android.util.logging.SyncStatusManager
 import org.oppia.android.util.networking.NetworkConnectionUtil
 import org.oppia.android.util.networking.NetworkConnectionUtil.ProdConnectionStatus.NONE
-import org.oppia.android.util.platformparameter.EnableLearnerStudyAnalytics
-import org.oppia.android.util.platformparameter.PlatformParameterValue
 import org.oppia.android.util.system.OppiaClock
 import org.oppia.android.util.threading.BackgroundDispatcher
 import org.oppia.android.util.threading.BlockingDispatcher
@@ -67,7 +67,7 @@ class AnalyticsController @Inject constructor(
   @EventLogStorageCacheSize private val eventLogStorageCacheSize: Int,
   @BlockingDispatcher private val blockingDispatcher: CoroutineDispatcher,
   @BackgroundDispatcher private val backgroundDispatcher: CoroutineDispatcher,
-  @EnableLearnerStudyAnalytics private val enableLearnerStudyParam: PlatformParameterValue<Boolean>
+  @FeatureFlag(LEARNER_STUDY_ANALYTICS) private val enableLearnerStudyAnalytics: Boolean
 ) {
   // NOTE TO DEVELOPER: This log store should not be lazy since it needs to be primed as early as
   // possible. Creating the log store with a delay (such as would happen if it were lazy delegated)
@@ -84,8 +84,6 @@ class AnalyticsController @Inject constructor(
       }
       syncStatusManager.initializeEventLogStore(store)
     }
-
-  private val enableLearnerStudyAnalytics get() = enableLearnerStudyParam.value
 
   /**
    * Logs a high priority event defined by [eventContext] corresponding to time [timestamp].

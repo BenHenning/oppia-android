@@ -6,8 +6,6 @@
 - [How to consume a Platform Parameter or Feature Flag](#how-to-consume-a-platform-parameter-or-feature-flag)
 - [Ensuring your Feature Flags are logged on each app session](#ensuring-your-feature-flags-are-logged-on-each-app-session)
 - [How to write tests related Platform Parameter](#how-to-write-tests-related-platform-parameter)
-  - [1. We actually don't test for platform parameter(s)](#1-we-actually-dont-test-for-platform-parameters)
-  - [2. We test for different values of platform parameter(s)](#2-we-test-for-different-values-of-platform-parameters) 
 
 ## Introduction
 With a large scale system like Oppia, we sometimes have features that contain several points of integration in the codebase, and/or require additional data priming or migrations ahead of the feature being released. These features often span multiple releases and thus require feature flags to gate integration points to ensure that the feature is not partially released ahead of schedule. Moreover, these features often require migrations which need to be run in specific releases due to new versions being made in irreversible data structures (e.g. explorations).
@@ -240,61 +238,138 @@ fun convertToInteger(flagName: String): Int {
 Ensure you also add a test for the latest addition to the `FeatureFlagNameToIntegerNameConverter` in the `FeatureFlagNameToIntegerNameConverterTest` file. Simply open the `utility/src/test/java/org/oppia/android/util/logging/FeatureFlagNameToIntegerNameConverterTest.kt` and add a new `@Iteration` to the `testConvertToIntegerName_returnsCorrectIntegerForEach` test. It is a parameterized test that runs by running through the list of testable iterations annotated to it.
 
 ## How to write tests related to Platform Parameters
-Before writing a test we must understand the purpose of the platform parameter in our class/classes (that needs to be tested). After verifying this we can divide testing procedures into following groups - 
+Feature Flags and Platform Parameters might be toggled on or off, and it is essential to ensure their functionality is maintained so that tests behave as intended.
 
-### 1. We actually don't test for platform parameter(s)
-We just need specific platform parameter(s) in the dagger graph because our class needs it, but our test cases are not actually verifying the behaviour of class based on different values of the platform parameter. These are the simplest cases to write tests for. We will only need to create a `TestModule` inside the Test class and then include this into the @Component for the `TestApplicationComponent`. For eg - 
+To facilitate this, specific annotations can be used:
+- **Feature Flags**:
+   - `@EnableFeatureFlag`
+   - `@DisableFeatureFlag`
+   - `@ResetFeatureFlagToDefault`
+
+- **Platform Parameters**:
+   - `@OverrideBoolParameter`
+   - `@OverrideIntParameter`
+   - `@OverrideStringParameter`
+
+These annotations allow to easily configure feature flags and platform parameters for their tests.
+
+## Usage
+
+Ensure that the `PlatformParameterModule` is properly injected into the test class.
 
 ```kotlin
-@Module
-class TestModule {
-  @Provides
-  @SyncUpWorkerTimePeriodInHours
-  fun provideSyncUpWorkerTimePeriod(): PlatformParameterValue<Int> {
-    return PlatformParameterValue.createDefaultParameter(
-      SYNC_UP_WORKER_TIME_PERIOD_IN_HOURS_DEFAULT_VALUE
-    )
-  }
-}
-
 @Singleton
-@Component(modules = [TestModule::class, ... ])
-interface TestApplicationComponent {
-  @Component.Builder
-  interface Builder {
-    @BindsInstance
-    fun setApplication(application: Application): Builder
-    fun build(): TestApplicationComponent
-  }
-  fun inject(platformParameterSyncUpWorkManagerInitializerTest: PlatformParameterSyncUpWorkManagerInitializerTest)
-}
+@Component(
+    modules = [PlatformParameterModule::class]
+)
 ```
 
-### 2. We test for different values of platform parameter(s)
-We need to test the behaviour of the target class/classes based on different values of the platform parameter. Same platform parameter can have different values because of the difference between its compile-time/default and runtime/server value. To test for this case we can set up a fake singleton class and provide the seed values that we want to be injected into target classes. For eg - 
+Include `OppiaTestRule` in the test file.
+
+```kotlin
+@get:Rule
+val oppiaTestRule = OppiaTestRule()
 ```
+
+### 1. Feature Flags
+
+Use the appropriate annotations for enabling, disabling, or resetting feature flags.
+
+```kotlin
+import org.oppia.android.app.model.FeatureFlagId.TEST_FEATURE
+
+...
+
 @Test
-fun testSyncUpWorker_checkIfServerValueOfSyncUpTimePeriodIsUsed(){
-  val seedValues = mapOf<String,PlatformParameter>(
-    SYNC_UP_WORKER_TIME_PERIOD_IN_HOURS to SYNC_UP_WORKER_TIME_PERIOD_IN_HOURS_SERVER_VALUE
-  )
-  setUpTestApplicationComponent(seedValues)
-  // Continue your normal testing
+@EnableFeatureFlag(TEST_FEATURE)
+fun testWhenFeatureFlagIsEnabled() {
+    // Test logic with the feature flag enabled
 }
 
-private fun setUpTestApplicationComponent(seedValues: Map<String, PlatformParameter>) {
-  MockPlatformParameterSingleton.seedPlatformParameterMap.putAll(seedValues)
-  ApplicationProvider.getApplicationContext<TestApplication>().inject(this)
+@Test
+@DisableFeatureFlag(TEST_FEATURE)
+fun testWhenFeatureFlagIsDisabled() {
+    // Test logic with the feature flag disabled
 }
 
-@Module
-class TestModule {
-  @Provides
-    fun provideMockPlatformParameterSingleton(
-      platformParameterSingletonImpl: PlatformParameterSingletonImpl
-    ) : PlatformParameterSingleton {
-      return MockPlatformParameterSingleton(platformParameterSingletonImpl)
-  }
+@Test
+@ResetFeatureFlagToDefault(TEST_FEATURE)
+fun testWithDefaultFeatureFlagState() {
+    // Test logic with default feature flag state
+}
+```
+
+The available feature flags are defined in the `FeatureFlagId` proto enum and should be directly imported as demonstrated above.
+
+### 2. Platform Parameters
+
+Use override annotations to override type specific platform parameter values for testing.
+
+```kotlin
+import org.oppia.android.app.model.PlatformParameterId.TEST_BOOLEAN_PARAMETER
+import org.oppia.android.app.model.PlatformParameterId.TEST_INT_PARAMETER
+import org.oppia.android.app.model.PlatformParameterId.TEST_STRING_PARAMETER
+
+...
+
+@Test
+@OverrideBoolParameter(TEST_BOOLEAN_PARAMETER, value = true)
+fun testWithOverriddenBooleanParameter() {
+    // Test logic with overridden boolean parameter
+}
+
+@Test
+@OverrideIntParameter(TEST_INT_PARAMETER, value = 42)
+fun testWithOverriddenIntParameter() {
+    // Test logic with overridden int parameter
+}
+
+@Test
+@OverrideStringParameter(TEST_STRING_PARAMETER, value = "Test Value")
+fun testWithOverriddenStringParameter() {
+    // Test logic with overridden string parameter
+}
+```
+
+Use these annotations to simulate specific runtime conditions by overriding the platform parameter values for your test cases.
+
+### Annotation Functionalities
+
+- Scope of Annotations
+   - `@EnableFeatureFlag`, `@DisableFeatureFlag`, `@OverrideBoolParameter`, `@OverrideIntParameter` and `@OverrideStringParameter` can be used at both class and method levels.
+   - `@ResetFeatureFlagToDefault` is specific to method level
+
+```kotlin
+import org.oppia.android.app.model.FeatureFlagId.TEST_FEATURE
+import org.oppia.android.app.model.PlatformParameterId.TEST_BOOLEAN_PARAMETER
+
+@EnableFeatureFlag(TEST_FEATURE)
+@OverrideBoolParameter(TEST_BOOLEAN_PARAMETER, value = true)
+class FeatureFlagPlatformParameterTest {
+
+    @Test
+    @DisableFeatureFlag(TEST_FEATURE)
+    @ResetFeatureFlagToDefault(TEST_FEATURE)
+    fun testWithMethodLevelOverrides() {
+        // Test logic
+    }
+}
+```
+
+- Multiple Annotations
+   - Multiple annotations can be applied simultaneously to tweak the values of multiple feature flags and platform parameters.
+
+```kotlin
+import org.oppia.android.app.model.FeatureFlagId.FEATURE_A
+import org.oppia.android.app.model.FeatureFlagId.FEATURE_B
+import org.oppia.android.app.model.PlatformParameterId.PARAMETER_X
+
+@Test
+@EnableFeatureFlag(FEATURE_A)
+@DisableFeatureFlag(FEATURE_B)
+@OverrideIntParameter(PARAMETER_X, value = 100)
+fun testWithMultipleOverrides() {
+    // Test logic combining multiple feature flags and platform parameter overrides
 }
 ```
 

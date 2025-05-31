@@ -61,6 +61,7 @@ import org.oppia.android.app.model.EventLog.Context.ActivityContextCase.SWITCH_I
 import org.oppia.android.app.model.EventLog.Context.ActivityContextCase.VIEW_EXISTING_HINT_CONTEXT
 import org.oppia.android.app.model.EventLog.Context.ActivityContextCase.VIEW_EXISTING_SOLUTION_CONTEXT
 import org.oppia.android.app.model.EventLog.SwitchInLessonLanguageEventContext
+import org.oppia.android.app.model.FeatureFlagId.LOGGING_LEARNER_STUDY_IDS
 import org.oppia.android.app.model.OppiaLanguage
 import org.oppia.android.app.model.OppiaMetricLog
 import org.oppia.android.app.model.OppiaMetricLog.LoggableMetric.LoggableMetricTypeCase
@@ -73,6 +74,7 @@ import org.oppia.android.app.model.OppiaMetricLog.LoggableMetric.LoggableMetricT
 import org.oppia.android.app.model.OppiaMetricLog.LoggableMetric.LoggableMetricTypeCase.STORAGE_USAGE_METRIC
 import org.oppia.android.app.model.ScreenName
 import org.oppia.android.app.model.WrittenTranslationLanguageSelection
+import org.oppia.android.domain.platformparameter.FeatureFlag
 import org.oppia.android.util.extensions.getVersionCode
 import org.oppia.android.util.extensions.getVersionName
 import org.oppia.android.util.logging.EventBundleCreator.EventActivityContext.AbandonSurveyContext
@@ -106,8 +108,6 @@ import org.oppia.android.util.logging.EventBundleCreator.PerformanceMetricsLogga
 import org.oppia.android.util.logging.EventBundleCreator.PerformanceMetricsLoggableMetricType.NetworkUsageLoggableMetric
 import org.oppia.android.util.logging.EventBundleCreator.PerformanceMetricsLoggableMetricType.StartupLatencyLoggableMetric
 import org.oppia.android.util.logging.EventBundleCreator.PerformanceMetricsLoggableMetricType.StorageUsageLoggableMetric
-import org.oppia.android.util.platformparameter.EnableLoggingLearnerStudyIds
-import org.oppia.android.util.platformparameter.PlatformParameterValue
 import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -153,8 +153,7 @@ private const val MAX_CHARACTERS_IN_PARAMETER_NAME = 40
 class EventBundleCreator @Inject constructor(
   private val context: Context,
   private val eventTypeNameConverter: EventTypeToHumanReadableNameConverter,
-  @EnableLoggingLearnerStudyIds
-  private val enableLoggingLearnerStudyIds: PlatformParameterValue<Boolean>
+  @FeatureFlag(LOGGING_LEARNER_STUDY_IDS) private val enableLoggingLearnerStudyIds: Boolean,
 ) {
   private val androidSdkVersion by lazy { Build.VERSION.SDK_INT }
   private val appVersionCode by lazy { context.getVersionCode() }
@@ -192,7 +191,7 @@ class EventBundleCreator @Inject constructor(
       eventContext.storeValue(
         PropertyStore(
           bundle,
-          allowUserIds = enableLoggingLearnerStudyIds.value
+          allowUserIds = enableLoggingLearnerStudyIds
         )
       )
     }.activityName
@@ -688,17 +687,17 @@ class EventBundleCreator @Inject constructor(
       value: FeatureFlagListEventContext
     ) : EventActivityContext<FeatureFlagListEventContext>(activityName, value) {
       override fun EventLog.FeatureFlagListContext.storeValue(store: PropertyStore) {
+        // Note that flag IDs are used instead of names for more compact logging to address Google
+        // Analytics character limits. GA4 limits the characters permitted in a log event parameter
+        // value to a maximum of 100 characters as of March 2025. See:
+        // https://firebase.google.com/docs/reference/android/com/google/firebase/analytics/FirebaseAnalytics.html#logEvent(java.lang.String,android.os.Bundle)
+        val featureFlagIds = featureFlagsList.map { it.id.number }
+        val featureFlagSyncStatuses = featureFlagsList.map { it.syncStatus.number }
+        val featureFlagEnabledStates = featureFlagsList.map { if (it.isEnabled) 1 else 0 }
 
-        val featureFlagNames = featureFlagsList.map {
-          FeatureFlagNameToNumericIdConverter.convertToNumericId(it.flagName)
-        }
-
-        val featureFlagSyncStatuses = featureFlagsList.map { it.flagSyncStatus.number }
-        val featureFlagEnabledStates = featureFlagsList.map { if (it.flagEnabledState) 1 else 0 }
-
-        store.putNonSensitiveValue("feature_flag_names", featureFlagNames)
         store.putNonSensitiveValue("feature_flag_enabled_states", featureFlagEnabledStates)
         store.putNonSensitiveValue("feature_flag_sync_statuses", featureFlagSyncStatuses)
+        store.putNonSensitiveValue("feature_flag_names", featureFlagIds)
       }
     }
 

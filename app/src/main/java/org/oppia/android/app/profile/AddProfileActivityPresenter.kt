@@ -25,16 +25,16 @@ import com.bumptech.glide.request.target.Target
 import org.oppia.android.app.activity.ActivityScope
 import org.oppia.android.app.databinding.databinding.AddProfileActivityBinding
 import org.oppia.android.app.model.AddProfileActivityParams
+import org.oppia.android.app.model.FeatureFlagId.DOWNLOADS_SUPPORT
 import org.oppia.android.app.profile.AddProfileActivity.Companion.ADD_PROFILE_ACTIVITY_PARAMS_KEY
 import org.oppia.android.app.translation.AppLanguageResourceHandler
 import org.oppia.android.app.ui.R
 import org.oppia.android.app.utility.TextInputEditTextHelper.Companion.onTextChanged
+import org.oppia.android.domain.platformparameter.FeatureFlag
 import org.oppia.android.domain.profile.ProfileManagementController
 import org.oppia.android.util.data.AsyncResult
 import org.oppia.android.util.data.DataProviders.Companion.toLiveData
 import org.oppia.android.util.extensions.getProtoExtra
-import org.oppia.android.util.platformparameter.EnableDownloadsSupport
-import org.oppia.android.util.platformparameter.PlatformParameterValue
 import javax.inject.Inject
 
 /** The presenter for [AddProfileActivity]. */
@@ -44,7 +44,7 @@ class AddProfileActivityPresenter @Inject constructor(
   private val profileManagementController: ProfileManagementController,
   private val resourceHandler: AppLanguageResourceHandler,
   private val profileViewModel: AddProfileViewModel,
-  @EnableDownloadsSupport private val enableDownloadsSupport: PlatformParameterValue<Boolean>
+  @FeatureFlag(DOWNLOADS_SUPPORT) private val enableDownloadsSupport: Boolean
 ) {
   private lateinit var uploadImageView: ImageView
   private var selectedImage: Uri? = null
@@ -69,7 +69,7 @@ class AddProfileActivityPresenter @Inject constructor(
       lifecycleOwner = activity
       viewModel = profileViewModel
     }
-    if (enableDownloadsSupport.value) {
+    if (enableDownloadsSupport) {
       binding.addProfileActivityAllowDownloadConstraintLayout.setOnClickListener {
         // Negating logic to sync with the switch component state
         allowDownloadAccess = !allowDownloadAccess

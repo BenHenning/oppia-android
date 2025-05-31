@@ -11,6 +11,9 @@ import kotlinx.coroutines.Deferred
 import org.oppia.android.app.model.AudioLanguage
 import org.oppia.android.app.model.AudioTranslationLanguageSelection
 import org.oppia.android.app.model.DeviceSettings
+import org.oppia.android.app.model.FeatureFlagId.LEARNER_STUDY_ANALYTICS
+import org.oppia.android.app.model.FeatureFlagId.LOGGING_LEARNER_STUDY_IDS
+import org.oppia.android.app.model.FeatureFlagId.ONBOARDING_FLOW_V2
 import org.oppia.android.app.model.OppiaLanguage
 import org.oppia.android.app.model.Profile
 import org.oppia.android.app.model.ProfileAvatar
@@ -27,6 +30,7 @@ import org.oppia.android.domain.oppialogger.OppiaLogger
 import org.oppia.android.domain.oppialogger.analytics.AnalyticsController
 import org.oppia.android.domain.oppialogger.analytics.LearnerAnalyticsLogger
 import org.oppia.android.domain.oppialogger.exceptions.ExceptionsController
+import org.oppia.android.domain.platformparameter.FeatureFlag
 import org.oppia.android.domain.translation.TranslationController
 import org.oppia.android.util.data.AsyncResult
 import org.oppia.android.util.data.DataProvider
@@ -34,10 +38,6 @@ import org.oppia.android.util.data.DataProviders
 import org.oppia.android.util.data.DataProviders.Companion.transform
 import org.oppia.android.util.data.DataProviders.Companion.transformAsync
 import org.oppia.android.util.locale.OppiaLocale
-import org.oppia.android.util.platformparameter.EnableLearnerStudyAnalytics
-import org.oppia.android.util.platformparameter.EnableLoggingLearnerStudyIds
-import org.oppia.android.util.platformparameter.EnableOnboardingFlowV2
-import org.oppia.android.util.platformparameter.PlatformParameterValue
 import org.oppia.android.util.profile.DirectoryManagementUtil
 import org.oppia.android.util.profile.ProfileNameValidator
 import org.oppia.android.util.system.OppiaClock
@@ -102,14 +102,11 @@ class ProfileManagementController @Inject constructor(
   private val machineLocale: OppiaLocale.MachineLocale,
   private val loggingIdentifierController: LoggingIdentifierController,
   private val learnerAnalyticsLogger: LearnerAnalyticsLogger,
-  @EnableLearnerStudyAnalytics
-  private val enableLearnerStudyAnalytics: PlatformParameterValue<Boolean>,
-  @EnableLoggingLearnerStudyIds
-  private val enableLoggingLearnerStudyIds: PlatformParameterValue<Boolean>,
+  @FeatureFlag(LEARNER_STUDY_ANALYTICS) private val enableLearnerStudyAnalytics: Boolean,
+  @FeatureFlag(LOGGING_LEARNER_STUDY_IDS) private val enableLoggingLearnerStudyIds: Boolean,
   private val profileNameValidator: ProfileNameValidator,
   private val translationController: TranslationController,
-  @EnableOnboardingFlowV2
-  private val enableOnboardingFlowV2: PlatformParameterValue<Boolean>,
+  @FeatureFlag(ONBOARDING_FLOW_V2) private val enableOnboardingFlowV2: Boolean,
   private val analyticsController: AnalyticsController
 ) {
   private var currentProfileId: Int = DEFAULT_LOGGED_OUT_INTERNAL_PROFILE_ID
@@ -219,7 +216,7 @@ class ProfileManagementController @Inject constructor(
     return profileDataStore.transformAsync(GET_PROFILE_PROVIDER_ID) {
       val profile = it.profilesMap[profileId.internalId]
       if (profile != null) {
-        if (enableOnboardingFlowV2.value) {
+        if (enableOnboardingFlowV2) {
           if (profile.profileType.equals(ProfileType.PROFILE_TYPE_UNSPECIFIED)) {
             updateProfileType(profileId, computeProfileType(profile.isAdmin, profile.pin))
           }
@@ -278,7 +275,7 @@ class ProfileManagementController @Inject constructor(
     val deferred = profileDataStore.storeDataWithCustomChannelAsync(
       updateInMemoryCache = true
     ) {
-      if (!enableLearnerStudyAnalytics.value && !profileNameValidator.isNameValid(name)) {
+      if (!enableLearnerStudyAnalytics && !profileNameValidator.isNameValid(name)) {
         return@storeDataWithCustomChannelAsync Pair(it, ProfileActionStatus.INVALID_PROFILE_NAME)
       }
       if (!isNameUnique(name, it)) {
@@ -305,7 +302,7 @@ class ProfileManagementController @Inject constructor(
         readingTextSize = ReadingTextSize.MEDIUM_TEXT_SIZE
         numberOfLogins = 0
 
-        if (enableLoggingLearnerStudyIds.value) {
+        if (enableLoggingLearnerStudyIds) {
           // Only set a learner ID if there's an ongoing user study.
           learnerId = loggingIdentifierController.createLearnerId()
         }
@@ -496,7 +493,7 @@ class ProfileManagementController @Inject constructor(
     val deferred = profileDataStore.storeDataWithCustomChannelAsync(
       updateInMemoryCache = true
     ) {
-      if (!enableLearnerStudyAnalytics.value && !profileNameValidator.isNameValid(newName)) {
+      if (!enableLearnerStudyAnalytics && !profileNameValidator.isNameValid(newName)) {
         return@storeDataWithCustomChannelAsync Pair(it, ProfileActionStatus.INVALID_PROFILE_NAME)
       }
       if (!isNameUnique(newName, it)) {
@@ -778,7 +775,7 @@ class ProfileManagementController @Inject constructor(
       val updatedProfile = profile.toBuilder().apply {
         learnerId = when {
           // There should be no learner ID if no ongoing study.
-          !enableLoggingLearnerStudyIds.value -> ""
+          !enableLoggingLearnerStudyIds -> ""
           learnerId.isEmpty() -> loggingIdentifierController.createLearnerId() // Generate new ID.
           else -> learnerId // Keep it unchanged.
         }
@@ -865,7 +862,7 @@ class ProfileManagementController @Inject constructor(
     val deferred = profileDataStore.storeDataWithCustomChannelAsync(
       updateInMemoryCache = true
     ) {
-      if (!enableLearnerStudyAnalytics.value && !profileNameValidator.isNameValid(newName)) {
+      if (!enableLearnerStudyAnalytics && !profileNameValidator.isNameValid(newName)) {
         return@storeDataWithCustomChannelAsync Pair(it, ProfileActionStatus.INVALID_PROFILE_NAME)
       }
       val profile =

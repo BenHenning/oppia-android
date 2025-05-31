@@ -48,6 +48,7 @@ import org.oppia.android.app.home.promotedlist.PromotedStoryListViewModel
 import org.oppia.android.app.home.topiclist.AllTopicsViewModel
 import org.oppia.android.app.home.topiclist.TopicSummaryViewModel
 import org.oppia.android.app.model.ClassroomSummary
+import org.oppia.android.app.model.FeatureFlagId.ONBOARDING_FLOW_V2
 import org.oppia.android.app.model.LessonThumbnail
 import org.oppia.android.app.model.LessonThumbnailGraphic
 import org.oppia.android.app.model.Profile
@@ -60,6 +61,7 @@ import org.oppia.android.domain.classroom.ClassroomController
 import org.oppia.android.domain.onboarding.AppStartupStateController
 import org.oppia.android.domain.oppialogger.OppiaLogger
 import org.oppia.android.domain.oppialogger.analytics.AnalyticsController
+import org.oppia.android.domain.platformparameter.FeatureFlag
 import org.oppia.android.domain.profile.ProfileManagementController
 import org.oppia.android.domain.topic.TopicListController
 import org.oppia.android.domain.translation.TranslationController
@@ -69,8 +71,6 @@ import org.oppia.android.util.locale.OppiaLocale
 import org.oppia.android.util.parser.html.ClassroomHtmlParserEntityType
 import org.oppia.android.util.parser.html.StoryHtmlParserEntityType
 import org.oppia.android.util.parser.html.TopicHtmlParserEntityType
-import org.oppia.android.util.platformparameter.EnableOnboardingFlowV2
-import org.oppia.android.util.platformparameter.PlatformParameterValue
 import org.oppia.android.util.profile.CurrentUserProfileIdIntentDecorator.extractCurrentUserProfileId
 import javax.inject.Inject
 
@@ -93,8 +93,7 @@ class ClassroomListFragmentPresenter @Inject constructor(
   private val translationController: TranslationController,
   private val machineLocale: OppiaLocale.MachineLocale,
   private val analyticsController: AnalyticsController,
-  @EnableOnboardingFlowV2
-  private val enableOnboardingFlowV2: PlatformParameterValue<Boolean>,
+  @FeatureFlag(ONBOARDING_FLOW_V2) private val enableOnboardingFlowV2: Boolean,
   private val appStartupStateController: AppStartupStateController
 ) {
   private val routeToTopicPlayStoryListener = activity as RouteToTopicPlayStoryListener
@@ -276,7 +275,7 @@ class ClassroomListFragmentPresenter @Inject constructor(
         val profile = result.value
         val profileType = profile.profileType
 
-        if (enableOnboardingFlowV2.value && !profile.completedProfileOnboarding) {
+        if (enableOnboardingFlowV2 && !profile.completedProfileOnboarding) {
           // These asynchronous API calls do not block or wait for their results. They execute in
           // the background and have minimal chances of interfering with the synchronous
           // `handleBackPress` call below.

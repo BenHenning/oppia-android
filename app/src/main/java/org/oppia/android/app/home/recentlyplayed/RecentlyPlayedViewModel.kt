@@ -3,18 +3,18 @@ package org.oppia.android.app.home.recentlyplayed
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.Transformations
+import org.oppia.android.app.model.FeatureFlagId.MULTIPLE_CLASSROOMS
 import org.oppia.android.app.model.ProfileId
 import org.oppia.android.app.model.PromotedActivityList
 import org.oppia.android.app.model.PromotedStory
 import org.oppia.android.app.translation.AppLanguageResourceHandler
 import org.oppia.android.app.view.models.R
+import org.oppia.android.domain.platformparameter.FeatureFlag
 import org.oppia.android.domain.topic.TopicListController
 import org.oppia.android.domain.translation.TranslationController
 import org.oppia.android.util.data.AsyncResult
 import org.oppia.android.util.data.DataProviders.Companion.toLiveData
 import org.oppia.android.util.parser.html.StoryHtmlParserEntityType
-import org.oppia.android.util.platformparameter.EnableMultipleClassrooms
-import org.oppia.android.util.platformparameter.PlatformParameterValue
 import javax.inject.Inject
 
 /** View model for [RecentlyPlayedFragment]. */
@@ -24,7 +24,7 @@ class RecentlyPlayedViewModel private constructor(
   @StoryHtmlParserEntityType private val entityType: String,
   private val resourceHandler: AppLanguageResourceHandler,
   private val translationController: TranslationController,
-  private val enableMultipleClassrooms: PlatformParameterValue<Boolean>,
+  private val enableMultipleClassrooms: Boolean,
   private val promotedStoryClickListener: PromotedStoryClickListener,
   private val profileId: ProfileId,
 ) {
@@ -36,8 +36,7 @@ class RecentlyPlayedViewModel private constructor(
     @StoryHtmlParserEntityType private val entityType: String,
     private val resourceHandler: AppLanguageResourceHandler,
     private val translationController: TranslationController,
-    @EnableMultipleClassrooms
-    private val enableMultipleClassrooms: PlatformParameterValue<Boolean>,
+    @FeatureFlag(MULTIPLE_CLASSROOMS) private val enableMultipleClassrooms: Boolean
   ) {
 
     /** Creates an instance of [RecentlyPlayedViewModel]. */
@@ -172,7 +171,7 @@ class RecentlyPlayedViewModel private constructor(
       promotedStoryClickListener,
       index,
       resourceHandler,
-      enableMultipleClassrooms.value,
+      enableMultipleClassrooms,
       translationController
     )
   }

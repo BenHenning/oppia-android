@@ -17,6 +17,9 @@ import org.oppia.android.app.model.AppStartupState.StartupMode
 import org.oppia.android.app.model.BuildFlavor
 import org.oppia.android.app.model.DeprecationNoticeType
 import org.oppia.android.app.model.DeprecationResponse
+import org.oppia.android.app.model.FeatureFlagId.APP_AND_OS_DEPRECATION
+import org.oppia.android.app.model.FeatureFlagId.MULTIPLE_CLASSROOMS
+import org.oppia.android.app.model.FeatureFlagId.ONBOARDING_FLOW_V2
 import org.oppia.android.app.model.IntroActivityParams
 import org.oppia.android.app.model.Profile
 import org.oppia.android.app.model.ProfileId
@@ -40,6 +43,7 @@ import org.oppia.android.domain.locale.LocaleController
 import org.oppia.android.domain.onboarding.AppStartupStateController
 import org.oppia.android.domain.onboarding.DeprecationController
 import org.oppia.android.domain.oppialogger.OppiaLogger
+import org.oppia.android.domain.platformparameter.FeatureFlag
 import org.oppia.android.domain.profile.ProfileManagementController
 import org.oppia.android.domain.translation.TranslationController
 import org.oppia.android.util.data.AsyncResult
@@ -48,10 +52,6 @@ import org.oppia.android.util.data.DataProviders.Companion.combineWith
 import org.oppia.android.util.data.DataProviders.Companion.toLiveData
 import org.oppia.android.util.extensions.putProtoExtra
 import org.oppia.android.util.locale.OppiaLocale
-import org.oppia.android.util.platformparameter.EnableAppAndOsDeprecation
-import org.oppia.android.util.platformparameter.EnableMultipleClassrooms
-import org.oppia.android.util.platformparameter.EnableOnboardingFlowV2
-import org.oppia.android.util.platformparameter.PlatformParameterValue
 import org.oppia.android.util.profile.CurrentUserProfileIdIntentDecorator.decorateWithUserProfileId
 import javax.inject.Inject
 
@@ -75,11 +75,10 @@ class SplashActivityPresenter @Inject constructor(
   private val appLanguageLocaleHandler: AppLanguageLocaleHandler,
   private val lifecycleSafeTimerFactory: LifecycleSafeTimerFactory,
   private val currentBuildFlavor: BuildFlavor,
-  @EnableAppAndOsDeprecation
-  private val enableAppAndOsDeprecation: PlatformParameterValue<Boolean>,
+  @FeatureFlag(APP_AND_OS_DEPRECATION) private val enableAppAndOsDeprecation: Boolean,
   private val profileManagementController: ProfileManagementController,
-  @EnableOnboardingFlowV2 private val enableOnboardingFlowV2: PlatformParameterValue<Boolean>,
-  @EnableMultipleClassrooms private val enableMultipleClassrooms: PlatformParameterValue<Boolean>
+  @FeatureFlag(ONBOARDING_FLOW_V2) private val enableOnboardingFlowV2: Boolean,
+  @FeatureFlag(MULTIPLE_CLASSROOMS) private val enableMultipleClassrooms: Boolean
 ) {
   lateinit var startupMode: StartupMode
 
@@ -251,7 +250,7 @@ class SplashActivityPresenter @Inject constructor(
   }
 
   private fun processStartupMode() {
-    if (enableAppAndOsDeprecation.value) {
+    if (enableAppAndOsDeprecation) {
       processAppAndOsDeprecationEnabledStartUpMode()
     } else {
       processLegacyStartupMode()
@@ -308,7 +307,7 @@ class SplashActivityPresenter @Inject constructor(
   }
 
   private fun handleUserOnboarded() {
-    if (enableOnboardingFlowV2.value) {
+    if (enableOnboardingFlowV2) {
       getProfileOnboardingState()
     } else {
       activity.startActivity(ProfileChooserActivity.createProfileChooserActivity(activity))
@@ -413,7 +412,7 @@ class SplashActivityPresenter @Inject constructor(
   }
 
   private fun launchHomeScreen(profileId: ProfileId) {
-    val intent = if (enableMultipleClassrooms.value) {
+    val intent = if (enableMultipleClassrooms) {
       ClassroomListActivity.createClassroomListActivity(activity, profileId)
     } else {
       HomeActivity.createHomeActivity(activity, profileId)

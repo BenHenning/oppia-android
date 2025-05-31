@@ -15,6 +15,7 @@ import androidx.lifecycle.Transformations
 import org.oppia.android.app.databinding.databinding.AudioFragmentBinding
 import org.oppia.android.app.fragment.FragmentScope
 import org.oppia.android.app.model.AudioLanguage
+import org.oppia.android.app.model.FeatureFlagId.SPOTLIGHT_UI
 import org.oppia.android.app.model.ProfileId
 import org.oppia.android.app.model.Spotlight
 import org.oppia.android.app.model.State
@@ -26,12 +27,11 @@ import org.oppia.android.app.translation.AppLanguageResourceHandler
 import org.oppia.android.app.ui.R
 import org.oppia.android.domain.audio.CellularAudioDialogController
 import org.oppia.android.domain.oppialogger.OppiaLogger
+import org.oppia.android.domain.platformparameter.FeatureFlag
 import org.oppia.android.domain.profile.ProfileManagementController
 import org.oppia.android.util.data.AsyncResult
 import org.oppia.android.util.data.DataProviders.Companion.toLiveData
 import org.oppia.android.util.networking.NetworkConnectionUtil
-import org.oppia.android.util.platformparameter.EnableSpotlightUi
-import org.oppia.android.util.platformparameter.PlatformParameterValue
 import javax.inject.Inject
 
 const val TAG_LANGUAGE_DIALOG = "LANGUAGE_DIALOG"
@@ -49,7 +49,7 @@ class AudioFragmentPresenter @Inject constructor(
   private val audioViewModel: AudioViewModel,
   private val oppiaLogger: OppiaLogger,
   private val resourceHandler: AppLanguageResourceHandler,
-  @EnableSpotlightUi private val enableSpotlightUi: PlatformParameterValue<Boolean>
+  @FeatureFlag(SPOTLIGHT_UI) private val enableSpotlightUi: Boolean
 ) {
   var userIsSeeking = false
   var userProgress = 0
@@ -291,9 +291,9 @@ class AudioFragmentPresenter @Inject constructor(
     audioButtonListener.scrollToTop()
     if (feedbackId == null) {
       // This isn't reloading content since it's the first case of the content auto-playing.
-      loadMainContentAudio(allowAutoPlay = !enableSpotlightUi.value, reloadingContent = false)
+      loadMainContentAudio(allowAutoPlay = !enableSpotlightUi, reloadingContent = false)
     } else {
-      loadFeedbackAudio(feedbackId!!, !enableSpotlightUi.value)
+      loadFeedbackAudio(feedbackId!!, !enableSpotlightUi)
     }
     fragment.view?.startAnimation(AnimationUtils.loadAnimation(context, R.anim.slide_down_audio))
     startSpotlights()

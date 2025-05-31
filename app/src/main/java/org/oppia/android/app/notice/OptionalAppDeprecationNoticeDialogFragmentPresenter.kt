@@ -4,18 +4,18 @@ import android.app.Dialog
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import org.oppia.android.app.model.DeprecationNoticeType
+import org.oppia.android.app.model.PlatformParameterId.OPTIONAL_APP_UPDATE_VERSION_CODE
 import org.oppia.android.app.translation.AppLanguageResourceHandler
 import org.oppia.android.app.ui.R
-import org.oppia.android.util.platformparameter.OptionalAppUpdateVersionCode
-import org.oppia.android.util.platformparameter.PlatformParameterValue
+import org.oppia.android.domain.platformparameter.PlatformParameter
 import javax.inject.Inject
 
 /** Presenter class responsible for showing an optional update dialog to the user. */
 class OptionalAppDeprecationNoticeDialogFragmentPresenter @Inject constructor(
   private val activity: AppCompatActivity,
   private val resourceHandler: AppLanguageResourceHandler,
-  @OptionalAppUpdateVersionCode
-  private val optionalAppUpdateVersionCode: PlatformParameterValue<Int>,
+  @PlatformParameter(OPTIONAL_APP_UPDATE_VERSION_CODE)
+  private val optionalAppUpdateVersionCode: Int,
 ) {
   private val deprecationNoticeActionListener by lazy {
     activity as DeprecationNoticeActionListener
@@ -42,7 +42,7 @@ class OptionalAppDeprecationNoticeDialogFragmentPresenter @Inject constructor(
         deprecationNoticeActionListener.onActionButtonClicked(
           DeprecationNoticeActionResponse.Dismiss(
             deprecationNoticeType = DeprecationNoticeType.APP_DEPRECATION,
-            deprecatedVersion = optionalAppUpdateVersionCode.value
+            deprecatedVersion = optionalAppUpdateVersionCode
           )
         )
       }

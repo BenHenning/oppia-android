@@ -15,6 +15,7 @@ import org.oppia.android.app.databinding.databinding.AudioLanguageSelectionFragm
 import org.oppia.android.app.home.HomeActivity
 import org.oppia.android.app.model.AudioLanguageFragmentStateBundle
 import org.oppia.android.app.model.AudioTranslationLanguageSelection
+import org.oppia.android.app.model.FeatureFlagId.MULTIPLE_CLASSROOMS
 import org.oppia.android.app.model.OppiaLanguage
 import org.oppia.android.app.model.ProfileId
 import org.oppia.android.app.options.AudioLanguageFragment.Companion.FRAGMENT_SAVED_STATE_KEY
@@ -22,14 +23,13 @@ import org.oppia.android.app.options.AudioLanguageSelectionViewModel
 import org.oppia.android.app.translation.AppLanguageResourceHandler
 import org.oppia.android.app.ui.R
 import org.oppia.android.domain.oppialogger.OppiaLogger
+import org.oppia.android.domain.platformparameter.FeatureFlag
 import org.oppia.android.domain.profile.ProfileManagementController
 import org.oppia.android.domain.translation.TranslationController
 import org.oppia.android.util.data.AsyncResult
 import org.oppia.android.util.data.DataProviders.Companion.toLiveData
 import org.oppia.android.util.extensions.getProto
 import org.oppia.android.util.extensions.putProto
-import org.oppia.android.util.platformparameter.EnableMultipleClassrooms
-import org.oppia.android.util.platformparameter.PlatformParameterValue
 import javax.inject.Inject
 
 /** The presenter for [AudioLanguageFragment]. */
@@ -40,7 +40,7 @@ class AudioLanguageFragmentPresenter @Inject constructor(
   private val audioLanguageSelectionViewModel: AudioLanguageSelectionViewModel,
   private val profileManagementController: ProfileManagementController,
   private val translationController: TranslationController,
-  @EnableMultipleClassrooms private val enableMultipleClassrooms: PlatformParameterValue<Boolean>,
+  @FeatureFlag(MULTIPLE_CLASSROOMS) private val enableMultipleClassrooms: Boolean,
   private val oppiaLogger: OppiaLogger
 ) {
   private lateinit var binding: AudioLanguageSelectionFragmentBinding
@@ -172,7 +172,7 @@ class AudioLanguageFragmentPresenter @Inject constructor(
   }
 
   private fun navigateToHomeScreen(profileId: ProfileId) {
-    val intent = if (enableMultipleClassrooms.value) {
+    val intent = if (enableMultipleClassrooms) {
       ClassroomListActivity.createClassroomListActivity(fragment.requireContext(), profileId)
     } else {
       HomeActivity.createHomeActivity(fragment.requireContext(), profileId)

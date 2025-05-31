@@ -5,13 +5,13 @@ import androidx.work.Data
 import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequest
 import androidx.work.WorkManager
+import org.oppia.android.app.model.PlatformParameterId.PERFORMANCE_METRICS_COLLECTION_HIGH_FREQUENCY_TIME_INTERVAL_IN_MINUTES
+import org.oppia.android.app.model.PlatformParameterId.PERFORMANCE_METRICS_COLLECTION_LOW_FREQUENCY_TIME_INTERVAL_IN_MINUTES
 import org.oppia.android.domain.oppialogger.analytics.AnalyticsStartupListener
 import org.oppia.android.domain.oppialogger.logscheduler.MetricLogSchedulingWorker
+import org.oppia.android.domain.platformparameter.PlatformParameter
 import org.oppia.android.util.logging.LogUploader
 import org.oppia.android.util.logging.MetricLogScheduler
-import org.oppia.android.util.platformparameter.PerformanceMetricsCollectionHighFrequencyTimeIntervalInMinutes
-import org.oppia.android.util.platformparameter.PerformanceMetricsCollectionLowFrequencyTimeIntervalInMinutes
-import org.oppia.android.util.platformparameter.PlatformParameterValue
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -23,10 +23,10 @@ import javax.inject.Inject
 class LogReportWorkManagerInitializer @Inject constructor(
   private val logUploader: LogUploader,
   private val metricLogScheduler: MetricLogScheduler,
-  @PerformanceMetricsCollectionHighFrequencyTimeIntervalInMinutes
-  performanceMetricsCollectionHighFrequencyTimeInterval: PlatformParameterValue<Int>,
-  @PerformanceMetricsCollectionLowFrequencyTimeIntervalInMinutes
-  performanceMetricCollectionLowFrequencyTimeInterval: PlatformParameterValue<Int>
+  @PlatformParameter(PERFORMANCE_METRICS_COLLECTION_HIGH_FREQUENCY_TIME_INTERVAL_IN_MINUTES)
+  performanceMetricsCollectionHighFrequencyTimeInterval: Int,
+  @PlatformParameter(PERFORMANCE_METRICS_COLLECTION_LOW_FREQUENCY_TIME_INTERVAL_IN_MINUTES)
+  performanceMetricCollectionLowFrequencyTimeInterval: Int
 ) : AnalyticsStartupListener {
 
   private val logReportWorkerConstraints = Constraints.Builder()
@@ -104,7 +104,7 @@ class LogReportWorkManagerInitializer @Inject constructor(
   private val workRequestForSchedulingPeriodicBackgroundMetricLogs: PeriodicWorkRequest =
     PeriodicWorkRequest.Builder(
       MetricLogSchedulingWorker::class.java,
-      performanceMetricsCollectionHighFrequencyTimeInterval.value.toLong(),
+      performanceMetricsCollectionHighFrequencyTimeInterval.toLong(),
       TimeUnit.MINUTES
     )
       .setInputData(workerCaseForSchedulingPeriodicBackgroundMetricLogs)
@@ -114,7 +114,7 @@ class LogReportWorkManagerInitializer @Inject constructor(
   private val workRequestForSchedulingStorageUsageMetricLogs: PeriodicWorkRequest =
     PeriodicWorkRequest.Builder(
       MetricLogSchedulingWorker::class.java,
-      performanceMetricCollectionLowFrequencyTimeInterval.value.toLong(),
+      performanceMetricCollectionLowFrequencyTimeInterval.toLong(),
       TimeUnit.MINUTES
     )
       .setInputData(workerCaseForSchedulingStorageUsageMetricLogs)
@@ -124,7 +124,7 @@ class LogReportWorkManagerInitializer @Inject constructor(
   private val workRequestForSchedulingPeriodicUiMetricLogs: PeriodicWorkRequest =
     PeriodicWorkRequest.Builder(
       MetricLogSchedulingWorker::class.java,
-      performanceMetricsCollectionHighFrequencyTimeInterval.value.toLong(),
+      performanceMetricsCollectionHighFrequencyTimeInterval.toLong(),
       TimeUnit.MINUTES
     )
       .setInputData(workerCaseForSchedulingPeriodicUiMetricLogs)

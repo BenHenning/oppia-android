@@ -10,6 +10,7 @@ import org.oppia.android.app.drawer.ExitProfileDialogFragment
 import org.oppia.android.app.drawer.TAG_SWITCH_PROFILE_DIALOG
 import org.oppia.android.app.model.DestinationScreen
 import org.oppia.android.app.model.ExitProfileDialogArguments
+import org.oppia.android.app.model.FeatureFlagId.ONBOARDING_FLOW_V2
 import org.oppia.android.app.model.HighlightItem
 import org.oppia.android.app.model.ProfileId
 import org.oppia.android.app.model.ProfileType
@@ -19,12 +20,12 @@ import org.oppia.android.app.model.ScreenName.HOME_ACTIVITY
 import org.oppia.android.app.topic.TopicActivity
 import org.oppia.android.app.translation.AppLanguageResourceHandler
 import org.oppia.android.app.ui.R
+import org.oppia.android.domain.platformparameter.FeatureFlag
 import org.oppia.android.util.logging.CurrentAppScreenNameIntentDecorator.decorateWithScreenName
-import org.oppia.android.util.platformparameter.EnableOnboardingFlowV2
-import org.oppia.android.util.platformparameter.PlatformParameterValue
 import org.oppia.android.util.profile.CurrentUserProfileIdIntentDecorator.decorateWithUserProfileId
 import org.oppia.android.util.profile.CurrentUserProfileIdIntentDecorator.extractCurrentUserProfileId
 import javax.inject.Inject
+import javax.inject.Provider
 
 /** The central activity for all users entering the app. */
 class HomeActivity :
@@ -43,8 +44,8 @@ class HomeActivity :
   lateinit var activityRouter: ActivityRouter
 
   @Inject
-  @field:EnableOnboardingFlowV2
-  lateinit var enableOnboardingFlowV2: PlatformParameterValue<Boolean>
+  @field:FeatureFlag(ONBOARDING_FLOW_V2)
+  lateinit var enableOnboardingFlowV2: Provider<Boolean>
 
   private var internalProfileId: Int = -1
 
@@ -116,7 +117,7 @@ class HomeActivity :
     val exitProfileDialogArguments =
       ExitProfileDialogArguments
         .newBuilder().apply {
-          if (enableOnboardingFlowV2.value) {
+          if (enableOnboardingFlowV2.get()) {
             this.profileType = profileType
           }
           this.highlightItem = HighlightItem.NONE

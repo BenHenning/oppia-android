@@ -24,6 +24,7 @@ import org.oppia.android.app.help.HelpActivity
 import org.oppia.android.app.home.HomeActivity
 import org.oppia.android.app.model.CompletedStoryList
 import org.oppia.android.app.model.ExitProfileDialogArguments
+import org.oppia.android.app.model.FeatureFlagId.MULTIPLE_CLASSROOMS
 import org.oppia.android.app.model.HighlightItem
 import org.oppia.android.app.model.OngoingTopicList
 import org.oppia.android.app.model.Profile
@@ -34,12 +35,11 @@ import org.oppia.android.app.profileprogress.ProfileProgressActivity
 import org.oppia.android.app.topic.TopicActivity
 import org.oppia.android.app.ui.R
 import org.oppia.android.domain.oppialogger.OppiaLogger
+import org.oppia.android.domain.platformparameter.FeatureFlag
 import org.oppia.android.domain.profile.ProfileManagementController
 import org.oppia.android.domain.topic.TopicController
 import org.oppia.android.util.data.AsyncResult
 import org.oppia.android.util.data.DataProviders.Companion.toLiveData
-import org.oppia.android.util.platformparameter.EnableMultipleClassrooms
-import org.oppia.android.util.platformparameter.PlatformParameterValue
 import org.oppia.android.util.profile.CurrentUserProfileIdIntentDecorator.extractCurrentUserProfileId
 import org.oppia.android.util.statusbar.StatusBarColor
 import javax.inject.Inject
@@ -57,7 +57,7 @@ class NavigationDrawerFragmentPresenter @Inject constructor(
   private val headerViewModel: NavigationDrawerHeaderViewModel,
   private val footerViewModel: NavigationDrawerFooterViewModel,
   private val developerOptionsStarter: Optional<DeveloperOptionsStarter>,
-  @EnableMultipleClassrooms private val enableMultipleClassrooms: PlatformParameterValue<Boolean>,
+  @FeatureFlag(MULTIPLE_CLASSROOMS) private val enableMultipleClassrooms: Boolean
 ) : NavigationView.OnNavigationItemSelectedListener {
   private lateinit var drawerToggle: ActionBarDrawerToggle
   private lateinit var drawerLayout: DrawerLayout
@@ -236,7 +236,7 @@ class NavigationDrawerFragmentPresenter @Inject constructor(
     if (previousMenuItemId != menuItemId) {
       when (NavigationDrawerItem.valueFromNavId(menuItemId)) {
         NavigationDrawerItem.HOME -> {
-          val intent = if (enableMultipleClassrooms.value)
+          val intent = if (enableMultipleClassrooms)
             ClassroomListActivity.createClassroomListActivity(activity, profileId)
           else
             HomeActivity.createHomeActivity(activity, profileId)

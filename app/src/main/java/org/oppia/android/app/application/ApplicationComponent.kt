@@ -7,6 +7,7 @@ import org.oppia.android.app.activity.ActivityComponentImpl
 import org.oppia.android.app.model.BuildFlavor
 import org.oppia.android.domain.oppialogger.ApplicationStartupListener
 import org.oppia.android.domain.oppialogger.analytics.AnalyticsStartupListener
+import org.oppia.android.domain.platformparameter.PlatformParameterController
 import javax.inject.Provider
 
 /**
@@ -31,6 +32,8 @@ interface ApplicationComponent : ApplicationInjector {
   fun getAnalyticsStartupListenerStartupListeners(): Set<AnalyticsStartupListener>
 
   fun getWorkManagerConfiguration(): Configuration
+
+  fun getPlatformParameterController(): PlatformParameterController
 
   fun getCurrentBuildFlavor(): BuildFlavor
 }
