@@ -57,12 +57,10 @@ import org.oppia.android.domain.oppialogger.LoggingIdentifierModule
 import org.oppia.android.domain.oppialogger.analytics.AnalyticsStartupListener
 import org.oppia.android.domain.oppialogger.analytics.ApplicationLifecycleModule
 import org.oppia.android.domain.oppialogger.analytics.CpuPerformanceSnapshotterModule
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjector
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjectorProvider
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterTestModule
+import org.oppia.android.domain.platformparameter.PlatformParameterModule
+import org.oppia.android.domain.platformparameter.PlatformParameterSingletonModule
 import org.oppia.android.domain.question.QuestionModule
 import org.oppia.android.domain.workmanager.WorkManagerConfigurationModule
-import org.oppia.android.testing.OppiaTestRule
 import org.oppia.android.testing.TestLogReportingModule
 import org.oppia.android.testing.firebase.TestAuthenticationModule
 import org.oppia.android.testing.junit.InitializeDefaultLocaleRule
@@ -111,7 +109,6 @@ private const val AFTERNOON_TIMESTAMP = 1556029320000
 @LooperMode(LooperMode.Mode.PAUSED)
 @Config(application = DateTimeUtilTest.TestApplication::class)
 class DateTimeUtilTest {
-  @get:Rule val oppiaTestRule = OppiaTestRule()
   @get:Rule val initializeDefaultLocaleRule = InitializeDefaultLocaleRule()
 
   @Inject lateinit var context: Context
@@ -258,7 +255,8 @@ class DateTimeUtilTest {
       NumberWithUnitsRuleModule::class,
       NumericExpressionInputModule::class,
       NumericInputRuleModule::class,
-      PlatformParameterTestModule::class,
+      PlatformParameterModule::class,
+      PlatformParameterSingletonModule::class,
       QuestionModule::class,
       RatioInputModule::class,
       RetrofitModule::class,
@@ -275,9 +273,7 @@ class DateTimeUtilTest {
       WorkManagerConfigurationModule::class
     ]
   )
-  interface TestApplicationComponent :
-    ApplicationComponent,
-    PlatformParameterInitializationInjector {
+  interface TestApplicationComponent : ApplicationComponent {
     @Component.Builder
     interface Builder {
       @BindsInstance
@@ -289,11 +285,7 @@ class DateTimeUtilTest {
     fun inject(dateTimeUtilTest: DateTimeUtilTest)
   }
 
-  class TestApplication :
-    Application(),
-    ActivityComponentFactory,
-    ApplicationInjectorProvider,
-    PlatformParameterInitializationInjectorProvider {
+  class TestApplication : Application(), ActivityComponentFactory, ApplicationInjectorProvider {
     private val component: TestApplicationComponent by lazy {
       DaggerDateTimeUtilTest_TestApplicationComponent.builder()
         .setApplication(this)
@@ -309,7 +301,5 @@ class DateTimeUtilTest {
     }
 
     override fun getApplicationInjector(): ApplicationInjector = component
-
-    override fun getPlatformParameterInitializationInjector() = component
   }
 }

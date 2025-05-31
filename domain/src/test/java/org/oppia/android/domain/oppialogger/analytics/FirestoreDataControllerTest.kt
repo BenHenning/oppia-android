@@ -16,7 +16,6 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.oppia.android.app.model.EventLog
@@ -25,11 +24,9 @@ import org.oppia.android.app.model.ProfileId
 import org.oppia.android.app.model.SurveyQuestionName
 import org.oppia.android.data.persistence.PersistentCacheStore
 import org.oppia.android.domain.oppialogger.FirestoreLogStorageCacheSize
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjector
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjectorProvider
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterTestModule
+import org.oppia.android.domain.platformparameter.PlatformParameterModule
+import org.oppia.android.domain.platformparameter.PlatformParameterSingletonModule
 import org.oppia.android.testing.FakeFirestoreEventLogger
-import org.oppia.android.testing.OppiaTestRule
 import org.oppia.android.testing.TestLogReportingModule
 import org.oppia.android.testing.data.DataProviderTestMonitor
 import org.oppia.android.testing.firebase.TestAuthenticationModule
@@ -63,9 +60,6 @@ import javax.inject.Singleton
 @LooperMode(LooperMode.Mode.PAUSED)
 @Config(application = FirestoreDataControllerTest.TestApplication::class)
 class FirestoreDataControllerTest {
-  @get:Rule
-  val oppiaTestRule = OppiaTestRule()
-
   @Inject
   lateinit var dataControllerProvider: Provider<FirestoreDataController>
 
@@ -462,7 +456,8 @@ class FirestoreDataControllerTest {
       FakeOppiaClockModule::class,
       LocaleProdModule::class,
       NetworkConnectionUtilDebugModule::class,
-      PlatformParameterTestModule::class,
+      PlatformParameterModule::class,
+      PlatformParameterSingletonModule::class,
       RobolectricModule::class,
       SyncStatusModule::class,
       TestAuthenticationModule::class,
@@ -472,9 +467,7 @@ class FirestoreDataControllerTest {
       TestModule::class
     ]
   )
-  interface TestApplicationComponent :
-    DataProvidersInjector,
-    PlatformParameterInitializationInjector {
+  interface TestApplicationComponent : DataProvidersInjector {
     @Component.Builder
     interface Builder {
       @BindsInstance
@@ -485,10 +478,7 @@ class FirestoreDataControllerTest {
     fun inject(dataControllerTest: FirestoreDataControllerTest)
   }
 
-  class TestApplication :
-    Application(),
-    DataProvidersInjectorProvider,
-    PlatformParameterInitializationInjectorProvider {
+  class TestApplication : Application(), DataProvidersInjectorProvider {
     private val component: TestApplicationComponent by lazy {
       DaggerFirestoreDataControllerTest_TestApplicationComponent.builder()
         .setApplication(this)
@@ -500,7 +490,5 @@ class FirestoreDataControllerTest {
     }
 
     override fun getDataProvidersInjector(): DataProvidersInjector = component
-
-    override fun getPlatformParameterInitializationInjector() = component
   }
 }

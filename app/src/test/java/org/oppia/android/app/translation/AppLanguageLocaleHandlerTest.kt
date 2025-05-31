@@ -12,7 +12,6 @@ import dagger.Component
 import dagger.Module
 import dagger.Provides
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.oppia.android.app.model.AppLanguageSelection
@@ -24,11 +23,9 @@ import org.oppia.android.domain.oppialogger.LogStorageModule
 import org.oppia.android.domain.oppialogger.LoggingIdentifierModule
 import org.oppia.android.domain.oppialogger.analytics.ApplicationLifecycleModule
 import org.oppia.android.domain.oppialogger.analytics.CpuPerformanceSnapshotterModule
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjector
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjectorProvider
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterTestModule
+import org.oppia.android.domain.platformparameter.PlatformParameterModule
+import org.oppia.android.domain.platformparameter.PlatformParameterSingletonModule
 import org.oppia.android.domain.translation.TranslationController
-import org.oppia.android.testing.OppiaTestRule
 import org.oppia.android.testing.TestLogReportingModule
 import org.oppia.android.testing.assertThrows
 import org.oppia.android.testing.data.DataProviderTestMonitor
@@ -57,9 +54,6 @@ import javax.inject.Singleton
 @LooperMode(LooperMode.Mode.PAUSED)
 @Config(application = AppLanguageLocaleHandlerTest.TestApplication::class)
 class AppLanguageLocaleHandlerTest {
-  @get:Rule
-  val oppiaTestRule = OppiaTestRule()
-
   @Inject
   lateinit var context: Context
 
@@ -343,7 +337,8 @@ class AppLanguageLocaleHandlerTest {
       LoggingIdentifierModule::class,
       NetworkConnectionDebugUtilModule::class,
       NetworkConnectionUtilDebugModule::class,
-      PlatformParameterTestModule::class,
+      PlatformParameterModule::class,
+      PlatformParameterSingletonModule::class,
       RobolectricModule::class,
       SyncStatusModule::class,
       TestDispatcherModule::class,
@@ -351,9 +346,7 @@ class AppLanguageLocaleHandlerTest {
       TestModule::class
     ]
   )
-  interface TestApplicationComponent :
-    DataProvidersInjector,
-    PlatformParameterInitializationInjector {
+  interface TestApplicationComponent : DataProvidersInjector {
     @Component.Builder
     interface Builder {
       @BindsInstance
@@ -365,10 +358,7 @@ class AppLanguageLocaleHandlerTest {
     fun inject(appLanguageLocaleHandlerTest: AppLanguageLocaleHandlerTest)
   }
 
-  class TestApplication :
-    Application(),
-    DataProvidersInjectorProvider,
-    PlatformParameterInitializationInjectorProvider {
+  class TestApplication : Application(), DataProvidersInjectorProvider {
     private val component: TestApplicationComponent by lazy {
       DaggerAppLanguageLocaleHandlerTest_TestApplicationComponent.builder()
         .setApplication(this)
@@ -380,7 +370,5 @@ class AppLanguageLocaleHandlerTest {
     }
 
     override fun getDataProvidersInjector(): DataProvidersInjector = component
-
-    override fun getPlatformParameterInitializationInjector() = component
   }
 }

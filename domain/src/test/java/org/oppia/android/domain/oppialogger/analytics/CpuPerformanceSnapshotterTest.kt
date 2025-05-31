@@ -10,29 +10,21 @@ import dagger.Component
 import dagger.Module
 import dagger.Provides
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.oppia.android.app.model.FeatureFlagId.PERFORMANCE_METRICS_COLLECTION
 import org.oppia.android.app.model.OppiaMetricLog.LoggableMetric.LoggableMetricTypeCase.CPU_USAGE_METRIC
 import org.oppia.android.app.model.ScreenName
-import org.oppia.android.data.backends.gae.RetrofitModule
-import org.oppia.android.data.backends.gae.RetrofitServiceModule
-import org.oppia.android.data.backends.gae.testing.NetworkConfigTestModule
 import org.oppia.android.domain.oppialogger.EventLogStorageCacheSize
 import org.oppia.android.domain.oppialogger.ExceptionLogStorageCacheSize
 import org.oppia.android.domain.oppialogger.LoggingIdentifierModule
 import org.oppia.android.domain.oppialogger.PerformanceMetricsLogStorageCacheSize
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjector
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjectorProvider
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterTestModule
-import org.oppia.android.testing.EnableFeatureFlag
+import org.oppia.android.domain.platformparameter.PlatformParameterSingletonModule
 import org.oppia.android.testing.FakePerformanceMetricAssessor
 import org.oppia.android.testing.FakePerformanceMetricsEventLogger
-import org.oppia.android.testing.OppiaTestRule
 import org.oppia.android.testing.TestLogReportingModule
 import org.oppia.android.testing.assertThrows
 import org.oppia.android.testing.logging.SyncStatusTestModule
+import org.oppia.android.testing.platformparameter.TestPlatformParameterModule
 import org.oppia.android.testing.robolectric.RobolectricModule
 import org.oppia.android.testing.threading.TestCoroutineDispatchers
 import org.oppia.android.testing.threading.TestDispatcherModule
@@ -65,25 +57,18 @@ private const val TEST_CPU_USAGE_TWO = 0.32192
 @RunWith(AndroidJUnit4::class)
 @LooperMode(LooperMode.Mode.PAUSED)
 @Config(application = CpuPerformanceSnapshotterTest.TestApplication::class)
-@EnableFeatureFlag(PERFORMANCE_METRICS_COLLECTION)
 class CpuPerformanceSnapshotterTest {
-  @get:Rule val oppiaTestRule = OppiaTestRule()
 
   @Inject
   lateinit var cpuPerformanceSnapshotter: CpuPerformanceSnapshotter
-
   @Inject
   lateinit var fakePerformanceMetricsEventLogger: FakePerformanceMetricsEventLogger
-
   @Inject
   lateinit var testCoroutineDispatchers: TestCoroutineDispatchers
-
   @Inject
   lateinit var applicationLifecycleObserver: ApplicationLifecycleObserver
-
   @Inject
   lateinit var fakePerformanceMetricAssessor: FakePerformanceMetricAssessor
-
   @Inject
   lateinit var fakeOppiaClock: FakeOppiaClock
 
@@ -98,6 +83,7 @@ class CpuPerformanceSnapshotterTest {
 
   @Before
   fun setUp() {
+    TestPlatformParameterModule.forceEnablePerformanceMetricsCollection(true)
     setUpTestApplicationComponent()
   }
 
@@ -502,22 +488,18 @@ class CpuPerformanceSnapshotterTest {
       FakeOppiaClockModule::class,
       LocaleProdModule::class,
       LoggingIdentifierModule::class,
-      NetworkConfigTestModule::class,
       NetworkConnectionUtilDebugModule::class,
-      PlatformParameterTestModule::class,
-      RetrofitModule::class,
-      RetrofitServiceModule::class,
+      PlatformParameterSingletonModule::class,
       RobolectricModule::class,
       SyncStatusTestModule::class,
       TestDispatcherModule::class,
       TestLogReportingModule::class,
       TestLogStorageModule::class,
-      TestModule::class
+      TestModule::class,
+      TestPlatformParameterModule::class
     ]
   )
-  interface TestApplicationComponent :
-    DataProvidersInjector,
-    PlatformParameterInitializationInjector {
+  interface TestApplicationComponent : DataProvidersInjector {
     @Component.Builder
     interface Builder {
       @BindsInstance
@@ -528,10 +510,7 @@ class CpuPerformanceSnapshotterTest {
     fun inject(cpuPerformanceSnapshotterTest: CpuPerformanceSnapshotterTest)
   }
 
-  class TestApplication :
-    Application(),
-    DataProvidersInjectorProvider,
-    PlatformParameterInitializationInjectorProvider {
+  class TestApplication : Application(), DataProvidersInjectorProvider {
     private val component: TestApplicationComponent by lazy {
       DaggerCpuPerformanceSnapshotterTest_TestApplicationComponent.builder()
         .setApplication(this)
@@ -543,7 +522,5 @@ class CpuPerformanceSnapshotterTest {
     }
 
     override fun getDataProvidersInjector(): DataProvidersInjector = component
-
-    override fun getPlatformParameterInitializationInjector() = component
   }
 }

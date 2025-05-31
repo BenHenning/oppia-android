@@ -47,8 +47,6 @@ import org.oppia.android.app.devoptions.DeveloperOptionsStarterModule
 import org.oppia.android.app.home.RouteToExplorationListener
 import org.oppia.android.app.model.ExplorationActivityParams
 import org.oppia.android.app.model.ExplorationCheckpoint
-import org.oppia.android.app.model.FeatureFlagId.EXTRA_TOPIC_TABS_UI
-import org.oppia.android.app.model.FeatureFlagId.SPOTLIGHT_UI
 import org.oppia.android.app.model.ProfileId
 import org.oppia.android.app.model.Spotlight
 import org.oppia.android.app.model.Spotlight.FeatureCase.FIRST_CHAPTER
@@ -94,10 +92,7 @@ import org.oppia.android.domain.oppialogger.analytics.ApplicationLifecycleModule
 import org.oppia.android.domain.oppialogger.analytics.CpuPerformanceSnapshotterModule
 import org.oppia.android.domain.oppialogger.logscheduler.MetricLogSchedulerModule
 import org.oppia.android.domain.oppialogger.loguploader.LogReportWorkerModule
-import org.oppia.android.domain.platformparameter.FeatureFlag
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjector
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjectorProvider
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterTestModule
+import org.oppia.android.domain.platformparameter.PlatformParameterSingletonModule
 import org.oppia.android.domain.question.QuestionModule
 import org.oppia.android.domain.spotlight.SpotlightStateController
 import org.oppia.android.domain.topic.FRACTIONS_STORY_ID_0
@@ -105,14 +100,13 @@ import org.oppia.android.domain.topic.FRACTIONS_TOPIC_ID
 import org.oppia.android.domain.topic.RATIOS_STORY_ID_0
 import org.oppia.android.domain.topic.RATIOS_TOPIC_ID
 import org.oppia.android.domain.workmanager.WorkManagerConfigurationModule
-import org.oppia.android.testing.DisableFeatureFlag
-import org.oppia.android.testing.EnableFeatureFlag
 import org.oppia.android.testing.FakeAnalyticsEventLogger
 import org.oppia.android.testing.OppiaTestRule
 import org.oppia.android.testing.TestLogReportingModule
 import org.oppia.android.testing.firebase.TestAuthenticationModule
 import org.oppia.android.testing.junit.InitializeDefaultLocaleRule
 import org.oppia.android.testing.logging.EventLogSubject.Companion.assertThat
+import org.oppia.android.testing.platformparameter.TestPlatformParameterModule
 import org.oppia.android.testing.robolectric.RobolectricModule
 import org.oppia.android.testing.story.StoryProgressTestHelper
 import org.oppia.android.testing.threading.TestCoroutineDispatchers
@@ -134,11 +128,12 @@ import org.oppia.android.util.networking.NetworkConnectionUtilDebugModule
 import org.oppia.android.util.parser.html.HtmlParserEntityTypeModule
 import org.oppia.android.util.parser.image.GlideImageLoaderModule
 import org.oppia.android.util.parser.image.ImageParsingModule
+import org.oppia.android.util.platformparameter.EnableExtraTopicTabsUi
+import org.oppia.android.util.platformparameter.PlatformParameterValue
 import org.oppia.android.util.profile.CurrentUserProfileIdIntentDecorator.decorateWithUserProfileId
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.LooperMode
 import javax.inject.Inject
-import javax.inject.Provider
 import javax.inject.Singleton
 
 private const val INFO_TAB_POSITION = 0
@@ -169,8 +164,8 @@ class TopicFragmentTest {
   @Inject lateinit var fakeAnalyticsEventLogger: FakeAnalyticsEventLogger
   @Inject lateinit var fakeAccessibilityService: FakeAccessibilityService
 
-  @field:[Inject FeatureFlag(EXTRA_TOPIC_TABS_UI)]
-  lateinit var enableExtraTopicTabsUi: Provider<Boolean>
+  @field:[Inject EnableExtraTopicTabsUi]
+  lateinit var enableExtraTopicTabsUi: PlatformParameterValue<Boolean>
 
   private val profileId = ProfileId.newBuilder().setInternalId(0).build()
   private val TOPIC_NAME = "Fractions"
@@ -178,6 +173,7 @@ class TopicFragmentTest {
   @Before
   fun setUp() {
     Intents.init()
+    TestPlatformParameterModule.reset()
   }
 
   @After
@@ -187,9 +183,8 @@ class TopicFragmentTest {
   }
 
   @Test
-  @DisableFeatureFlag(EXTRA_TOPIC_TABS_UI)
   fun testTopicFragment_toolbarTitle_isDisplayedSuccessfully() {
-    initializeApplicationComponent()
+    initializeApplicationComponent(enableExtraTabsUi = false)
     runWithLaunchedActivityAndAddedFragment(
       profileId, TEST_CLASSROOM_ID_1, FRACTIONS_TOPIC_ID, FRACTIONS_STORY_ID_0
     ) {
@@ -199,10 +194,8 @@ class TopicFragmentTest {
   }
 
   @Test
-  @EnableFeatureFlag(SPOTLIGHT_UI)
-  @DisableFeatureFlag(EXTRA_TOPIC_TABS_UI)
   fun testLessonsTabSpotlight_spotlightAlreadySeen_checkSpotlightNotShown() {
-    initializeApplicationComponent()
+    initializeApplicationComponent(false)
     markSpotlightSeen(FIRST_CHAPTER)
     runWithLaunchedActivityAndAddedFragment(
       profileId, TEST_CLASSROOM_ID_1, FRACTIONS_TOPIC_ID, FRACTIONS_STORY_ID_0
@@ -221,10 +214,8 @@ class TopicFragmentTest {
   }
 
   @Test
-  @EnableFeatureFlag(SPOTLIGHT_UI)
-  @DisableFeatureFlag(EXTRA_TOPIC_TABS_UI)
   fun testTopicLessonTabSpotlight_spotlightNotSeenBefore_checkSpotlightIsShown() {
-    initializeApplicationComponent()
+    initializeApplicationComponent(false)
     runWithLaunchedActivityAndAddedFragment(
       profileId, TEST_CLASSROOM_ID_1, FRACTIONS_TOPIC_ID, FRACTIONS_STORY_ID_0
     ) {
@@ -234,10 +225,8 @@ class TopicFragmentTest {
   }
 
   @Test
-  @EnableFeatureFlag(SPOTLIGHT_UI)
-  @DisableFeatureFlag(EXTRA_TOPIC_TABS_UI)
   fun testFirstChapterSpotlight_setToShowOnFirstLogin_checkSpotlightShown() {
-    initializeApplicationComponent()
+    initializeApplicationComponent(false)
     markSpotlightSeen(TOPIC_LESSON_TAB)
     runWithLaunchedActivityAndAddedFragment(
       profileId, TEST_CLASSROOM_ID_1, FRACTIONS_TOPIC_ID, FRACTIONS_STORY_ID_0
@@ -248,10 +237,8 @@ class TopicFragmentTest {
   }
 
   @Test
-  @EnableFeatureFlag(SPOTLIGHT_UI)
-  @DisableFeatureFlag(EXTRA_TOPIC_TABS_UI)
   fun testFirstChapterSpotlight_setToShowOnFirstLogin_alreadySeen_checkSpotlightNotShown() {
-    initializeApplicationComponent()
+    initializeApplicationComponent(false)
     runWithLaunchedActivityAndAddedFragment(
       profileId, TEST_CLASSROOM_ID_1, FRACTIONS_TOPIC_ID, FRACTIONS_STORY_ID_0
     ) {
@@ -271,10 +258,8 @@ class TopicFragmentTest {
   }
 
   @Test
-  @EnableFeatureFlag(SPOTLIGHT_UI)
-  @DisableFeatureFlag(EXTRA_TOPIC_TABS_UI)
   fun testRevisionTabSpotlight_setToShowAfterAtleast3ChaptersCompleted_notSeenBefore_checkShown() {
-    initializeApplicationComponent()
+    initializeApplicationComponent(false)
     markSpotlightSeen(FIRST_CHAPTER)
     markSpotlightSeen(TOPIC_LESSON_TAB)
     storyProgressTestHelper.markCompletedFractionsStory0Exp0(profileId, false)
@@ -290,9 +275,8 @@ class TopicFragmentTest {
   }
 
   @Test
-  @DisableFeatureFlag(EXTRA_TOPIC_TABS_UI)
   fun testRevisionTabSpotlight_setToShowAfterAtleast3ChaptersCompleted_notComplete_checkNotShown() {
-    initializeApplicationComponent()
+    initializeApplicationComponent(false)
     markSpotlightSeen(TOPIC_LESSON_TAB)
     markSpotlightSeen(FIRST_CHAPTER)
     runWithLaunchedActivityAndAddedFragment(
@@ -304,10 +288,8 @@ class TopicFragmentTest {
   }
 
   @Test
-  @EnableFeatureFlag(SPOTLIGHT_UI)
-  @DisableFeatureFlag(EXTRA_TOPIC_TABS_UI)
   fun testRevisionTabSpotlight_setToShowAfterAtleast3ChaptersCompleted_alreadySeen_checkNotShown() {
-    initializeApplicationComponent()
+    initializeApplicationComponent(false)
     markSpotlightSeen(TOPIC_LESSON_TAB)
     markSpotlightSeen(FIRST_CHAPTER)
     fakeOppiaClock.setFakeTimeMode(FakeOppiaClock.FakeTimeMode.MODE_UPTIME_MILLIS)
@@ -331,9 +313,8 @@ class TopicFragmentTest {
   }
 
   @Test
-  @DisableFeatureFlag(EXTRA_TOPIC_TABS_UI)
   fun testTopicFragment_toolbarTitle_readerOff_marqueeInRtl_isDisplayedCorrectly() {
-    initializeApplicationComponent()
+    initializeApplicationComponent(false)
     markSpotlightSeen(TOPIC_LESSON_TAB)
     fakeAccessibilityService.setScreenReaderEnabled(false)
     runWithLaunchedActivityAndAddedFragment(
@@ -353,9 +334,8 @@ class TopicFragmentTest {
   }
 
   @Test
-  @DisableFeatureFlag(EXTRA_TOPIC_TABS_UI)
   fun testTopicFragment_toolbarTitle_readerOn_marqueeInRtl_isDisplayedCorrectly() {
-    initializeApplicationComponent()
+    initializeApplicationComponent(false)
     markSpotlightSeen(TOPIC_LESSON_TAB)
     fakeAccessibilityService.setScreenReaderEnabled(true)
     runWithLaunchedActivityAndAddedFragment(
@@ -375,9 +355,8 @@ class TopicFragmentTest {
   }
 
   @Test
-  @DisableFeatureFlag(EXTRA_TOPIC_TABS_UI)
   fun testTopicFragment_toolbarTitle_readerOff_marqueeInLtr_isDisplayedCorrectly() {
-    initializeApplicationComponent()
+    initializeApplicationComponent(false)
     markSpotlightSeen(TOPIC_LESSON_TAB)
     fakeAccessibilityService.setScreenReaderEnabled(false)
     runWithLaunchedActivityAndAddedFragment(
@@ -396,9 +375,8 @@ class TopicFragmentTest {
   }
 
   @Test
-  @DisableFeatureFlag(EXTRA_TOPIC_TABS_UI)
   fun testTopicFragment_toolbarTitle_readerOn_marqueeInLtr_isDisplayedCorrectly() {
-    initializeApplicationComponent()
+    initializeApplicationComponent(false)
     markSpotlightSeen(TOPIC_LESSON_TAB)
     fakeAccessibilityService.setScreenReaderEnabled(true)
     runWithLaunchedActivityAndAddedFragment(
@@ -417,9 +395,8 @@ class TopicFragmentTest {
   }
 
   @Test
-  @DisableFeatureFlag(EXTRA_TOPIC_TABS_UI)
   fun testTopicFragment_clickOnToolbarNavigationButton_closeActivity() {
-    initializeApplicationComponent()
+    initializeApplicationComponent(false)
     runWithLaunchedActivityAndAddedFragment(
       profileId, TEST_CLASSROOM_ID_1, FRACTIONS_TOPIC_ID, FRACTIONS_STORY_ID_0
     ) {
@@ -429,9 +406,8 @@ class TopicFragmentTest {
   }
 
   @Test
-  @DisableFeatureFlag(EXTRA_TOPIC_TABS_UI)
   fun testTopicFragment_showsTopicFragmentWithMultipleTabs() {
-    initializeApplicationComponent()
+    initializeApplicationComponent(enableExtraTabsUi = false)
     runWithLaunchedActivityAndAddedFragment(
       profileId, TEST_CLASSROOM_ID_1, FRACTIONS_TOPIC_ID, FRACTIONS_STORY_ID_0
     ) {
@@ -440,9 +416,8 @@ class TopicFragmentTest {
   }
 
   @Test
-  @DisableFeatureFlag(EXTRA_TOPIC_TABS_UI)
   fun testTopicFragment_swipePage_hasSwipedPage() {
-    initializeApplicationComponent()
+    initializeApplicationComponent(enableExtraTabsUi = false)
     runWithLaunchedActivityAndAddedFragment(
       profileId, TEST_CLASSROOM_ID_1, FRACTIONS_TOPIC_ID, FRACTIONS_STORY_ID_0
     ) {
@@ -453,9 +428,8 @@ class TopicFragmentTest {
   }
 
   @Test
-  @EnableFeatureFlag(EXTRA_TOPIC_TABS_UI)
   fun testTopicFragment_enableExtraTabs_infoTopicTab_isDisplayedInTabLayout() {
-    initializeApplicationComponent()
+    initializeApplicationComponent(enableExtraTabsUi = true)
     runWithLaunchedActivityAndAddedFragment(
       profileId, TEST_CLASSROOM_ID_1, FRACTIONS_TOPIC_ID, FRACTIONS_STORY_ID_0
     ) {
@@ -463,7 +437,7 @@ class TopicFragmentTest {
         withText(
           TopicTab.getTabForPosition(
             position = INFO_TAB_POSITION,
-            enableExtraTopicTabsUi.get()
+            enableExtraTopicTabsUi.value
           ).name
         )
       ).check(matches(isDescendantOfA(withId(R.id.topic_tabs_container))))
@@ -471,9 +445,8 @@ class TopicFragmentTest {
   }
 
   @Test
-  @DisableFeatureFlag(EXTRA_TOPIC_TABS_UI)
   fun testTopicFragment_disableExtraTabs_infoTopicTab_isNotDisplayedInTabLayout() {
-    initializeApplicationComponent()
+    initializeApplicationComponent(enableExtraTabsUi = false)
     runWithLaunchedActivityAndAddedFragment(
       profileId, TEST_CLASSROOM_ID_1, FRACTIONS_TOPIC_ID, FRACTIONS_STORY_ID_0
     ) {
@@ -483,9 +456,8 @@ class TopicFragmentTest {
   }
 
   @Test
-  @DisableFeatureFlag(EXTRA_TOPIC_TABS_UI)
   fun testTopicFragment_disableExtraTabs_defaultTabIsLessons() {
-    initializeApplicationComponent()
+    initializeApplicationComponent(enableExtraTabsUi = false)
     runWithLaunchedActivityAndAddedFragment(
       profileId, TEST_CLASSROOM_ID_1, FRACTIONS_TOPIC_ID, FRACTIONS_STORY_ID_0
     ) {
@@ -495,9 +467,8 @@ class TopicFragmentTest {
   }
 
   @Test
-  @EnableFeatureFlag(EXTRA_TOPIC_TABS_UI)
   fun testTopicFragment_enableExtraTabs_defaultTabIsLessons() {
-    initializeApplicationComponent()
+    initializeApplicationComponent(enableExtraTabsUi = true)
     runWithLaunchedActivityAndAddedFragment(
       profileId, TEST_CLASSROOM_ID_1, FRACTIONS_TOPIC_ID, FRACTIONS_STORY_ID_0
     ) {
@@ -507,9 +478,8 @@ class TopicFragmentTest {
   }
 
   @Test
-  @DisableFeatureFlag(EXTRA_TOPIC_TABS_UI)
   fun testTopicFragment_disableExtraTabs_clickOnLessonsTab_showsPlayTabSelected() {
-    initializeApplicationComponent()
+    initializeApplicationComponent(enableExtraTabsUi = false)
     runWithLaunchedActivityAndAddedFragment(
       profileId, TEST_CLASSROOM_ID_1, FRACTIONS_TOPIC_ID, FRACTIONS_STORY_ID_0
     ) {
@@ -519,9 +489,8 @@ class TopicFragmentTest {
   }
 
   @Test
-  @EnableFeatureFlag(EXTRA_TOPIC_TABS_UI)
   fun testTopicFragment_clickOnLessonsTab_showsPlayTabWithContentMatched() {
-    initializeApplicationComponent()
+    initializeApplicationComponent(enableExtraTabsUi = true)
     markAllSpotlightsSeen()
     runWithLaunchedActivityAndAddedFragment(
       profileId, TEST_CLASSROOM_ID_1, FRACTIONS_TOPIC_ID, FRACTIONS_STORY_ID_0
@@ -539,14 +508,13 @@ class TopicFragmentTest {
   }
 
   @Test
-  @EnableFeatureFlag(EXTRA_TOPIC_TABS_UI)
   fun testTopicFragment_practiceTabEnabled_practiceTopicTabIsDisplayedInTabLayout() {
-    initializeApplicationComponent()
+    initializeApplicationComponent(enableExtraTabsUi = true)
     runWithLaunchedActivityAndAddedFragment(
       profileId, TEST_CLASSROOM_ID_1, FRACTIONS_TOPIC_ID, FRACTIONS_STORY_ID_0
     ) {
       val practiceTab =
-        TopicTab.getTabForPosition(position = PRACTICE_TAB_POSITION, enableExtraTopicTabsUi.get())
+        TopicTab.getTabForPosition(position = PRACTICE_TAB_POSITION, enableExtraTopicTabsUi.value)
       onView(withText(practiceTab.name)).check(
         matches(
           isDescendantOfA(
@@ -560,9 +528,8 @@ class TopicFragmentTest {
   }
 
   @Test
-  @DisableFeatureFlag(EXTRA_TOPIC_TABS_UI)
   fun testTopicFragment_disableExtraTabs_practiceTopicTabIsNotDisplayedInTabLayout() {
-    initializeApplicationComponent()
+    initializeApplicationComponent(enableExtraTabsUi = false)
     runWithLaunchedActivityAndAddedFragment(
       profileId, TEST_CLASSROOM_ID_1, FRACTIONS_TOPIC_ID, FRACTIONS_STORY_ID_0
     ) {
@@ -575,9 +542,8 @@ class TopicFragmentTest {
   }
 
   @Test
-  @DisableFeatureFlag(EXTRA_TOPIC_TABS_UI)
   fun testTopicFragment_disableExtraTabs_configChange_practiceTopicTabIsNotDisplayed() {
-    initializeApplicationComponent()
+    initializeApplicationComponent(enableExtraTabsUi = false)
     runWithLaunchedActivityAndAddedFragment(
       profileId, TEST_CLASSROOM_ID_1, FRACTIONS_TOPIC_ID, FRACTIONS_STORY_ID_0
     ) {
@@ -594,9 +560,8 @@ class TopicFragmentTest {
   }
 
   @Test
-  @EnableFeatureFlag(EXTRA_TOPIC_TABS_UI)
   fun testTopicFragment_enableExtraTabs_clickOnPracticeTab_showsPracticeTabSelected() {
-    initializeApplicationComponent()
+    initializeApplicationComponent(enableExtraTabsUi = true)
     runWithLaunchedActivityAndAddedFragment(
       profileId, TEST_CLASSROOM_ID_1, FRACTIONS_TOPIC_ID, FRACTIONS_STORY_ID_0
     ) {
@@ -606,9 +571,8 @@ class TopicFragmentTest {
   }
 
   @Test
-  @EnableFeatureFlag(EXTRA_TOPIC_TABS_UI)
   fun testTopicFragment_enableExtraTabs_clickOnPracticeTab_showsPracticeTabWithContentMatched() {
-    initializeApplicationComponent()
+    initializeApplicationComponent(enableExtraTabsUi = true)
     markAllSpotlightsSeen()
     runWithLaunchedActivityAndAddedFragment(
       profileId, TEST_CLASSROOM_ID_1, FRACTIONS_TOPIC_ID, FRACTIONS_STORY_ID_0
@@ -626,9 +590,8 @@ class TopicFragmentTest {
   }
 
   @Test
-  @DisableFeatureFlag(EXTRA_TOPIC_TABS_UI)
   fun testTopicFragment_clickOnReviewTab_showsReviewTabSelected() {
-    initializeApplicationComponent()
+    initializeApplicationComponent(enableExtraTabsUi = false)
     runWithLaunchedActivityAndAddedFragment(
       profileId, TEST_CLASSROOM_ID_1, FRACTIONS_TOPIC_ID, FRACTIONS_STORY_ID_0
     ) {
@@ -638,9 +601,8 @@ class TopicFragmentTest {
   }
 
   @Test
-  @DisableFeatureFlag(EXTRA_TOPIC_TABS_UI)
   fun testTopicFragment_clickOnReviewTab_showsReviewTabWithContentMatched() {
-    initializeApplicationComponent()
+    initializeApplicationComponent(enableExtraTabsUi = false)
     markAllSpotlightsSeen()
     runWithLaunchedActivityAndAddedFragment(
       profileId, TEST_CLASSROOM_ID_1, FRACTIONS_TOPIC_ID, FRACTIONS_STORY_ID_0
@@ -658,9 +620,8 @@ class TopicFragmentTest {
   }
 
   @Test
-  @EnableFeatureFlag(EXTRA_TOPIC_TABS_UI)
   fun testTopicFragment_enableExtraTabs_clickOnReviewTab_thenInfoTab_showsInfoTab() {
-    initializeApplicationComponent()
+    initializeApplicationComponent(enableExtraTabsUi = true)
     runWithLaunchedActivityAndAddedFragment(
       profileId, TEST_CLASSROOM_ID_1, FRACTIONS_TOPIC_ID, FRACTIONS_STORY_ID_0
     ) {
@@ -671,9 +632,8 @@ class TopicFragmentTest {
   }
 
   @Test
-  @EnableFeatureFlag(EXTRA_TOPIC_TABS_UI)
   fun enableExtraTabs_clickOnReviewTab_thenInfoTab_showsInfoTabWithContentMatched() {
-    initializeApplicationComponent()
+    initializeApplicationComponent(enableExtraTabsUi = true)
     runWithLaunchedActivityAndAddedFragment(
       profileId, TEST_CLASSROOM_ID_1, FRACTIONS_TOPIC_ID, storyId = null
     ) {
@@ -691,9 +651,8 @@ class TopicFragmentTest {
   }
 
   @Test
-  @DisableFeatureFlag(EXTRA_TOPIC_TABS_UI)
   fun testTopicFragment_clickOnLessonsTab_configChange_showsSameTabAndItsContent() {
-    initializeApplicationComponent()
+    initializeApplicationComponent(enableExtraTabsUi = false)
     runWithLaunchedActivityAndAddedFragment(
       profileId, TEST_CLASSROOM_ID_1, FRACTIONS_TOPIC_ID, FRACTIONS_STORY_ID_0
     ) {
@@ -712,9 +671,8 @@ class TopicFragmentTest {
   }
 
   @Test
-  @EnableFeatureFlag(EXTRA_TOPIC_TABS_UI)
   fun enableExtraTabs_clickOnPracticeTab_configChange_showsSameTabAndItsContent() {
-    initializeApplicationComponent()
+    initializeApplicationComponent(enableExtraTabsUi = true)
     markAllSpotlightsSeen()
     runWithLaunchedActivityAndAddedFragment(
       profileId, TEST_CLASSROOM_ID_1, FRACTIONS_TOPIC_ID, FRACTIONS_STORY_ID_0
@@ -741,9 +699,8 @@ class TopicFragmentTest {
   }
 
   @Test
-  @DisableFeatureFlag(EXTRA_TOPIC_TABS_UI)
   fun testTopicFragment_clickOnReviewTab_configChange_showsSameTabAndItsContent() {
-    initializeApplicationComponent()
+    initializeApplicationComponent(enableExtraTabsUi = false)
     markAllSpotlightsSeen()
     runWithLaunchedActivityAndAddedFragment(
       profileId, TEST_CLASSROOM_ID_1, FRACTIONS_TOPIC_ID, FRACTIONS_STORY_ID_0
@@ -763,9 +720,8 @@ class TopicFragmentTest {
   }
 
   @Test
-  @EnableFeatureFlag(EXTRA_TOPIC_TABS_UI)
   fun testTopicFragment_enableExtraTabs_configChange_showsDefaultTabAndItsContent() {
-    initializeApplicationComponent()
+    initializeApplicationComponent(enableExtraTabsUi = true)
     runWithLaunchedActivityAndAddedFragment(
       profileId, TEST_CLASSROOM_ID_1, FRACTIONS_TOPIC_ID, FRACTIONS_STORY_ID_0
     ) {
@@ -783,9 +739,8 @@ class TopicFragmentTest {
   }
 
   @Test
-  @DisableFeatureFlag(EXTRA_TOPIC_TABS_UI)
   fun testTopicFragment_disableExtraTabs_configChange_showsDefaultTabAndItsContent() {
-    initializeApplicationComponent()
+    initializeApplicationComponent(enableExtraTabsUi = false)
     runWithLaunchedActivityAndAddedFragment(
       profileId, TEST_CLASSROOM_ID_1, FRACTIONS_TOPIC_ID, FRACTIONS_STORY_ID_0
     ) {
@@ -803,9 +758,8 @@ class TopicFragmentTest {
   }
 
   @Test
-  @EnableFeatureFlag(EXTRA_TOPIC_TABS_UI)
   fun enableExtraTabs_withStoryId_clickOnPracticeTab_configChange_showsSameTabAndItsContent() {
-    initializeApplicationComponent()
+    initializeApplicationComponent(enableExtraTabsUi = true)
     markAllSpotlightsSeen()
     runWithLaunchedActivityAndAddedFragment(
       profileId, TEST_CLASSROOM_ID_1, FRACTIONS_TOPIC_ID, FRACTIONS_STORY_ID_0
@@ -832,9 +786,8 @@ class TopicFragmentTest {
   }
 
   @Test
-  @DisableFeatureFlag(EXTRA_TOPIC_TABS_UI)
   fun testOpenFragment_lessonsTabDefaulted_logsLessonsTabOpen() {
-    initializeApplicationComponent()
+    initializeApplicationComponent(enableExtraTabsUi = false)
     markAllSpotlightsSeen()
     runWithLaunchedActivityAndAddedFragment(
       profileId, TEST_CLASSROOM_ID_1, FRACTIONS_TOPIC_ID, FRACTIONS_STORY_ID_0
@@ -848,9 +801,8 @@ class TopicFragmentTest {
   }
 
   @Test
-  @DisableFeatureFlag(EXTRA_TOPIC_TABS_UI)
   fun testOpenFragment_lessonsTabDefaulted_switchToRevisionTab_logsRevisionTabOpen() {
-    initializeApplicationComponent()
+    initializeApplicationComponent(enableExtraTabsUi = false)
     markAllSpotlightsSeen()
     runWithLaunchedActivityAndAddedFragment(
       profileId, TEST_CLASSROOM_ID_1, FRACTIONS_TOPIC_ID, FRACTIONS_STORY_ID_0
@@ -867,9 +819,8 @@ class TopicFragmentTest {
   }
 
   @Test
-  @DisableFeatureFlag(EXTRA_TOPIC_TABS_UI)
   fun testOpenFragment_lessonsTabDefaulted_switchToRevisionTabThenBack_logsLessonsTabOpenAgain() {
-    initializeApplicationComponent()
+    initializeApplicationComponent(enableExtraTabsUi = false)
     markAllSpotlightsSeen()
     runWithLaunchedActivityAndAddedFragment(
       profileId, TEST_CLASSROOM_ID_1, FRACTIONS_TOPIC_ID, FRACTIONS_STORY_ID_0
@@ -888,9 +839,8 @@ class TopicFragmentTest {
   }
 
   @Test
-  @EnableFeatureFlag(EXTRA_TOPIC_TABS_UI)
   fun testOpenFragment_extraTabs_openInfoTab_logsInfoTabOpen() {
-    initializeApplicationComponent()
+    initializeApplicationComponent(enableExtraTabsUi = true)
     markAllSpotlightsSeen()
     runWithLaunchedActivityAndAddedFragment(
       profileId, TEST_CLASSROOM_ID_1, FRACTIONS_TOPIC_ID, FRACTIONS_STORY_ID_0
@@ -907,9 +857,8 @@ class TopicFragmentTest {
   }
 
   @Test
-  @EnableFeatureFlag(EXTRA_TOPIC_TABS_UI)
   fun testOpenFragment_extraTabs_openQuestionsTab_logsInfoQuestionsOpen() {
-    initializeApplicationComponent()
+    initializeApplicationComponent(enableExtraTabsUi = true)
     markAllSpotlightsSeen()
     runWithLaunchedActivityAndAddedFragment(
       profileId, TEST_CLASSROOM_ID_1, FRACTIONS_TOPIC_ID, FRACTIONS_STORY_ID_0
@@ -928,7 +877,7 @@ class TopicFragmentTest {
   private fun clickTabAtPosition(position: Int) {
     onView(
       allOf(
-        withText(TopicTab.getTabForPosition(position, enableExtraTopicTabsUi.get()).name),
+        withText(TopicTab.getTabForPosition(position, enableExtraTopicTabsUi.value).name),
         isDescendantOfA(withId(R.id.topic_tabs_container))
       )
     ).perform(click())
@@ -938,7 +887,7 @@ class TopicFragmentTest {
     onView(withId(R.id.topic_tabs_container)).check(
       matches(
         matchCurrentTabTitle(
-          TopicTab.getTabForPosition(position, enableExtraTopicTabsUi.get()).name
+          TopicTab.getTabForPosition(position, enableExtraTopicTabsUi.value).name
         )
       )
     )
@@ -979,7 +928,8 @@ class TopicFragmentTest {
     testCoroutineDispatchers.runCurrent()
   }
 
-  private fun initializeApplicationComponent() {
+  private fun initializeApplicationComponent(enableExtraTabsUi: Boolean) {
+    TestPlatformParameterModule.forceEnableExtraTopicTabsUi(enableExtraTabsUi)
     setUpTestApplicationComponent()
     testCoroutineDispatchers.registerIdlingResource()
     fakeOppiaClock.setFakeTimeMode(FakeOppiaClock.FakeTimeMode.MODE_UPTIME_MILLIS)
@@ -1127,7 +1077,7 @@ class TopicFragmentTest {
       NumberWithUnitsRuleModule::class,
       NumericExpressionInputModule::class,
       NumericInputRuleModule::class,
-      PlatformParameterTestModule::class,
+      PlatformParameterSingletonModule::class,
       QuestionModule::class,
       RatioInputModule::class,
       RetrofitModule::class,
@@ -1138,15 +1088,14 @@ class TopicFragmentTest {
       TestAuthenticationModule::class,
       TestDispatcherModule::class,
       TestLogReportingModule::class,
+      TestPlatformParameterModule::class,
       TestingBuildFlavorModule::class,
       TextInputRuleModule::class,
       ViewBindingShimModule::class,
       WorkManagerConfigurationModule::class
     ]
   )
-  interface TestApplicationComponent :
-    ApplicationComponent,
-    PlatformParameterInitializationInjector {
+  interface TestApplicationComponent : ApplicationComponent {
     @Component.Builder
     interface Builder : ApplicationComponent.Builder {
       override fun build(): TestApplicationComponent
@@ -1155,11 +1104,7 @@ class TopicFragmentTest {
     fun inject(topicFragmentTest: TopicFragmentTest)
   }
 
-  class TestApplication :
-    Application(),
-    ActivityComponentFactory,
-    ApplicationInjectorProvider,
-    PlatformParameterInitializationInjectorProvider {
+  class TestApplication : Application(), ActivityComponentFactory, ApplicationInjectorProvider {
     private val component: TestApplicationComponent by lazy {
       DaggerTopicFragmentTest_TestApplicationComponent.builder()
         .setApplication(this)
@@ -1175,7 +1120,5 @@ class TopicFragmentTest {
     }
 
     override fun getApplicationInjector(): ApplicationInjector = component
-
-    override fun getPlatformParameterInitializationInjector() = component
   }
 }

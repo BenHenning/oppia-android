@@ -10,15 +10,11 @@ import dagger.BindsInstance
 import dagger.Component
 import dagger.Module
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjector
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjectorProvider
 import org.oppia.android.testing.FakeAnalyticsEventLogger
 import org.oppia.android.testing.FakeExceptionLogger
 import org.oppia.android.testing.FakePerformanceMetricsEventLogger
-import org.oppia.android.testing.OppiaTestRule
 import org.oppia.android.testing.robolectric.RobolectricModule
 import org.oppia.android.testing.threading.TestDispatcherModule
 import org.oppia.android.util.data.DataProvidersInjector
@@ -40,8 +36,6 @@ import javax.inject.Singleton
 @LooperMode(LooperMode.Mode.PAUSED)
 @Config(application = PerformanceMetricsAssessorModuleTest.TestApplication::class)
 class PerformanceMetricsAssessorModuleTest {
-  @get:Rule
-  val oppiaTestRule = OppiaTestRule()
 
   @Inject
   lateinit var performanceMetricsAssessor: PerformanceMetricsAssessor
@@ -98,9 +92,7 @@ class PerformanceMetricsAssessorModuleTest {
       TestModule::class
     ]
   )
-  interface TestApplicationComponent :
-    DataProvidersInjector,
-    PlatformParameterInitializationInjector {
+  interface TestApplicationComponent : DataProvidersInjector {
     @Component.Builder
     interface Builder {
       @BindsInstance
@@ -111,10 +103,7 @@ class PerformanceMetricsAssessorModuleTest {
     fun inject(test: PerformanceMetricsAssessorModuleTest)
   }
 
-  class TestApplication :
-    Application(),
-    DataProvidersInjectorProvider,
-    PlatformParameterInitializationInjectorProvider {
+  class TestApplication : Application(), DataProvidersInjectorProvider {
     private val component: TestApplicationComponent by lazy {
       DaggerPerformanceMetricsAssessorModuleTest_TestApplicationComponent.builder()
         .setApplication(this)
@@ -126,7 +115,5 @@ class PerformanceMetricsAssessorModuleTest {
     }
 
     override fun getDataProvidersInjector(): DataProvidersInjector = component
-
-    override fun getPlatformParameterInitializationInjector() = component
   }
 }

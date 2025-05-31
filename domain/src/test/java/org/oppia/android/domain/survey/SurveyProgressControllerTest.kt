@@ -10,32 +10,21 @@ import dagger.Component
 import dagger.Module
 import dagger.Provides
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.oppia.android.app.model.EphemeralSurveyQuestion
-import org.oppia.android.app.model.FeatureFlagId.LEARNER_STUDY_ANALYTICS
 import org.oppia.android.app.model.MarketFitAnswer
 import org.oppia.android.app.model.ProfileId
 import org.oppia.android.app.model.SurveyQuestionName
 import org.oppia.android.app.model.SurveySelectedAnswer
 import org.oppia.android.app.model.UserTypeAnswer
-import org.oppia.android.data.backends.gae.RetrofitModule
-import org.oppia.android.data.backends.gae.RetrofitServiceModule
-import org.oppia.android.data.backends.gae.testing.NetworkConfigTestModule
 import org.oppia.android.domain.exploration.ExplorationProgressModule
 import org.oppia.android.domain.oppialogger.ApplicationIdSeed
 import org.oppia.android.domain.oppialogger.LogStorageModule
 import org.oppia.android.domain.oppialogger.analytics.ApplicationLifecycleModule
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjector
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjectorProvider
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterTestModule
-import org.oppia.android.domain.question.QuestionModule
-import org.oppia.android.testing.EnableFeatureFlag
 import org.oppia.android.testing.FakeAnalyticsEventLogger
 import org.oppia.android.testing.FakeExceptionLogger
 import org.oppia.android.testing.FakeFirestoreEventLogger
-import org.oppia.android.testing.OppiaTestRule
 import org.oppia.android.testing.TestLogReportingModule
 import org.oppia.android.testing.data.DataProviderTestMonitor
 import org.oppia.android.testing.firebase.TestAuthenticationModule
@@ -54,6 +43,9 @@ import org.oppia.android.util.logging.GlobalLogLevel
 import org.oppia.android.util.logging.LogLevel
 import org.oppia.android.util.logging.SyncStatusModule
 import org.oppia.android.util.networking.NetworkConnectionUtilDebugModule
+import org.oppia.android.util.platformparameter.EnableLearnerStudyAnalytics
+import org.oppia.android.util.platformparameter.LEARNER_STUDY_ANALYTICS_DEFAULT_VALUE
+import org.oppia.android.util.platformparameter.PlatformParameterValue
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.LooperMode
 import javax.inject.Inject
@@ -63,10 +55,7 @@ import javax.inject.Singleton
 @RunWith(AndroidJUnit4::class)
 @LooperMode(LooperMode.Mode.PAUSED)
 @Config(application = SurveyProgressControllerTest.TestApplication::class)
-@EnableFeatureFlag(LEARNER_STUDY_ANALYTICS)
 class SurveyProgressControllerTest {
-  @get:Rule val oppiaTestRule = OppiaTestRule()
-
   @Inject
   lateinit var fakeExceptionLogger: FakeExceptionLogger
 
@@ -527,6 +516,10 @@ class SurveyProgressControllerTest {
 
   @Module
   class TestModule {
+    internal companion object {
+      var enableLearnerStudyAnalytics = LEARNER_STUDY_ANALYTICS_DEFAULT_VALUE
+    }
+
     @Provides
     @Singleton
     fun provideContext(application: Application): Context {
@@ -545,6 +538,13 @@ class SurveyProgressControllerTest {
     @GlobalLogLevel
     @Provides
     fun provideGlobalLogLevel(): LogLevel = LogLevel.VERBOSE
+
+    @Provides
+    @EnableLearnerStudyAnalytics
+    fun provideLearnerStudyAnalytics(): PlatformParameterValue<Boolean> {
+      // Enable the study by default in tests.
+      return PlatformParameterValue.createDefaultParameter(defaultValue = true)
+    }
   }
 
   @Module
@@ -568,12 +568,7 @@ class SurveyProgressControllerTest {
       FakeOppiaClockModule::class,
       LocaleProdModule::class,
       LogStorageModule::class,
-      NetworkConfigTestModule::class,
       NetworkConnectionUtilDebugModule::class,
-      PlatformParameterTestModule::class,
-      QuestionModule::class,
-      RetrofitModule::class,
-      RetrofitServiceModule::class,
       RobolectricModule::class,
       SyncStatusModule::class,
       TestAuthenticationModule::class,
@@ -584,9 +579,7 @@ class SurveyProgressControllerTest {
     ]
   )
 
-  interface TestApplicationComponent :
-    DataProvidersInjector,
-    PlatformParameterInitializationInjector {
+  interface TestApplicationComponent : DataProvidersInjector {
     @Component.Builder
     interface Builder {
       @BindsInstance
@@ -598,10 +591,7 @@ class SurveyProgressControllerTest {
     fun inject(surveyProgressControllerTest: SurveyProgressControllerTest)
   }
 
-  class TestApplication :
-    Application(),
-    DataProvidersInjectorProvider,
-    PlatformParameterInitializationInjectorProvider {
+  class TestApplication : Application(), DataProvidersInjectorProvider {
     private val component: TestApplicationComponent by lazy {
       DaggerSurveyProgressControllerTest_TestApplicationComponent.builder()
         .setApplication(this)
@@ -613,8 +603,6 @@ class SurveyProgressControllerTest {
     }
 
     override fun getDataProvidersInjector(): DataProvidersInjector = component
-
-    override fun getPlatformParameterInitializationInjector() = component
   }
 
   companion object {

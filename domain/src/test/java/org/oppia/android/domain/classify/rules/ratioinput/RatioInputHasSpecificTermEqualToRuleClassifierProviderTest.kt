@@ -7,13 +7,11 @@ import com.google.common.truth.Truth.assertThat
 import dagger.BindsInstance
 import dagger.Component
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.oppia.android.domain.classify.ClassificationContext
 import org.oppia.android.domain.classify.InteractionObjectTestBuilder
 import org.oppia.android.domain.classify.RuleClassifier
-import org.oppia.android.testing.OppiaTestRule
 import org.oppia.android.testing.assertThrows
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.LooperMode
@@ -27,9 +25,6 @@ import javax.inject.Singleton
 @LooperMode(LooperMode.Mode.PAUSED)
 @Config(manifest = Config.NONE)
 class RatioInputHasSpecificTermEqualToRuleClassifierProviderTest {
-  @get:Rule
-  val oppiaTestRule = OppiaTestRule()
-
   @Inject
   internal lateinit var ratioInputHasSpecificTermEqualToRuleClassifierProvider:
     RatioInputHasSpecificTermEqualToRuleClassifierProvider

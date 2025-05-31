@@ -88,8 +88,7 @@ import org.oppia.android.domain.oppialogger.analytics.ApplicationLifecycleModule
 import org.oppia.android.domain.oppialogger.analytics.CpuPerformanceSnapshotterModule
 import org.oppia.android.domain.oppialogger.logscheduler.MetricLogSchedulerModule
 import org.oppia.android.domain.oppialogger.loguploader.LogReportWorkerModule
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjector
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjectorProvider
+import org.oppia.android.domain.platformparameter.PlatformParameterSingletonModule
 import org.oppia.android.domain.question.QuestionModule
 import org.oppia.android.domain.topic.FRACTIONS_EXPLORATION_ID_0
 import org.oppia.android.domain.topic.FRACTIONS_STORY_ID_0
@@ -102,6 +101,7 @@ import org.oppia.android.testing.firebase.TestAuthenticationModule
 import org.oppia.android.testing.junit.InitializeDefaultLocaleRule
 import org.oppia.android.testing.lightweightcheckpointing.ExplorationCheckpointTestHelper
 import org.oppia.android.testing.lightweightcheckpointing.FRACTIONS_STORY_0_EXPLORATION_0_CURRENT_VERSION
+import org.oppia.android.testing.platformparameter.TestPlatformParameterModule
 import org.oppia.android.testing.profile.ProfileTestHelper
 import org.oppia.android.testing.robolectric.RobolectricModule
 import org.oppia.android.testing.story.StoryProgressTestHelper
@@ -526,7 +526,7 @@ class RecentlyPlayedActivityTest {
       NumberWithUnitsRuleModule::class,
       NumericExpressionInputModule::class,
       NumericInputRuleModule::class,
-      PlatformParameterTestModule::class,
+      PlatformParameterSingletonModule::class,
       QuestionModule::class,
       RatioInputModule::class,
       RetrofitModule::class,
@@ -538,15 +538,14 @@ class RecentlyPlayedActivityTest {
       TestDispatcherModule::class,
       TestImageLoaderModule::class,
       TestLogReportingModule::class,
+      TestPlatformParameterModule::class,
       TestingBuildFlavorModule::class,
       TextInputRuleModule::class,
       ViewBindingShimModule::class,
       WorkManagerConfigurationModule::class
     ]
   )
-  interface TestApplicationComponent :
-    ApplicationComponent,
-    PlatformParameterInitializationInjector {
+  interface TestApplicationComponent : ApplicationComponent {
     @Component.Builder
     interface Builder : ApplicationComponent.Builder {
       override fun build(): TestApplicationComponent
@@ -555,11 +554,7 @@ class RecentlyPlayedActivityTest {
     fun inject(recentlyPlayedFragmentTest: RecentlyPlayedActivityTest)
   }
 
-  class TestApplication :
-    Application(),
-    ActivityComponentFactory,
-    ApplicationInjectorProvider,
-    PlatformParameterInitializationInjectorProvider {
+  class TestApplication : Application(), ActivityComponentFactory, ApplicationInjectorProvider {
     private val component: TestApplicationComponent by lazy {
       DaggerRecentlyPlayedActivityTest_TestApplicationComponent.builder()
         .setApplication(this)
@@ -575,7 +570,5 @@ class RecentlyPlayedActivityTest {
     }
 
     override fun getApplicationInjector(): ApplicationInjector = component
-
-    override fun getPlatformParameterInitializationInjector() = component
   }
 }

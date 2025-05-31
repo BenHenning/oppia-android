@@ -29,10 +29,6 @@ import org.oppia.android.app.model.EventLog.Context.ActivityContextCase.RESUME_L
 import org.oppia.android.app.model.EventLog.Context.ActivityContextCase.START_EXPLORATION_CONTEXT
 import org.oppia.android.app.model.Exploration
 import org.oppia.android.app.model.ExplorationCheckpoint
-import org.oppia.android.app.model.FeatureFlagId.LEARNER_STUDY_ANALYTICS
-import org.oppia.android.app.model.FeatureFlagId.LOGGING_LEARNER_STUDY_IDS
-import org.oppia.android.app.model.FeatureFlagId.NPS_SURVEY
-import org.oppia.android.app.model.FeatureFlagId.ONBOARDING_FLOW_V2
 import org.oppia.android.app.model.Fraction
 import org.oppia.android.app.model.HelpIndex
 import org.oppia.android.app.model.HelpIndex.IndexTypeCase.EVERYTHING_REVEALED
@@ -50,9 +46,6 @@ import org.oppia.android.app.model.TranslatableHtmlContentId
 import org.oppia.android.app.model.UserAnswer
 import org.oppia.android.app.model.WrittenTranslationContext
 import org.oppia.android.app.model.WrittenTranslationLanguageSelection
-import org.oppia.android.data.backends.gae.RetrofitModule
-import org.oppia.android.data.backends.gae.RetrofitServiceModule
-import org.oppia.android.data.backends.gae.testing.NetworkConfigTestModule
 import org.oppia.android.domain.classify.InteractionsModule
 import org.oppia.android.domain.classify.rules.algebraicexpressioninput.AlgebraicExpressionInputModule
 import org.oppia.android.domain.classify.rules.continueinteraction.ContinueModule
@@ -78,9 +71,7 @@ import org.oppia.android.domain.hintsandsolution.isSolutionRevealed
 import org.oppia.android.domain.oppialogger.LogStorageModule
 import org.oppia.android.domain.oppialogger.LoggingIdentifierModule
 import org.oppia.android.domain.oppialogger.analytics.ApplicationLifecycleModule
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjector
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjectorProvider
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterTestModule
+import org.oppia.android.domain.platformparameter.PlatformParameterSingletonModule
 import org.oppia.android.domain.profile.ProfileManagementController
 import org.oppia.android.domain.topic.FRACTIONS_EXPLORATION_ID_0
 import org.oppia.android.domain.topic.FRACTIONS_STORY_ID_0
@@ -95,7 +86,6 @@ import org.oppia.android.domain.topic.TEST_TOPIC_ID_1
 import org.oppia.android.domain.translation.TranslationController
 import org.oppia.android.domain.util.toAnswerString
 import org.oppia.android.testing.BuildEnvironment
-import org.oppia.android.testing.EnableFeatureFlag
 import org.oppia.android.testing.FakeAnalyticsEventLogger
 import org.oppia.android.testing.FakeExceptionLogger
 import org.oppia.android.testing.OppiaTestRule
@@ -123,6 +113,11 @@ import org.oppia.android.util.logging.GlobalLogLevel
 import org.oppia.android.util.logging.LogLevel
 import org.oppia.android.util.logging.SyncStatusModule
 import org.oppia.android.util.networking.NetworkConnectionUtilDebugModule
+import org.oppia.android.util.platformparameter.EnableLearnerStudyAnalytics
+import org.oppia.android.util.platformparameter.EnableLoggingLearnerStudyIds
+import org.oppia.android.util.platformparameter.EnableNpsSurvey
+import org.oppia.android.util.platformparameter.EnableOnboardingFlowV2
+import org.oppia.android.util.platformparameter.PlatformParameterValue
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.LooperMode
 import java.util.Locale
@@ -145,10 +140,6 @@ private const val INVALID_EXPLORATION_ID = "invalid_exp_id"
 @RunWith(AndroidJUnit4::class)
 @LooperMode(LooperMode.Mode.PAUSED)
 @Config(application = ExplorationProgressControllerTest.TestApplication::class)
-@EnableFeatureFlag(LEARNER_STUDY_ANALYTICS)
-@EnableFeatureFlag(LOGGING_LEARNER_STUDY_IDS)
-@EnableFeatureFlag(NPS_SURVEY)
-@EnableFeatureFlag(ONBOARDING_FLOW_V2)
 class ExplorationProgressControllerTest {
   // TODO(#3646): Add much more thorough tests for the integration pathway.
 
@@ -2248,7 +2239,6 @@ class ExplorationProgressControllerTest {
   }
 
   @Test
-  @EnableFeatureFlag(LOGGING_LEARNER_STUDY_IDS)
   fun testPlayNewExploration_logsStartCardEvent() {
     logIntoAnalyticsReadyAdminProfile()
 
@@ -2268,7 +2258,6 @@ class ExplorationProgressControllerTest {
   }
 
   @Test
-  @EnableFeatureFlag(LOGGING_LEARNER_STUDY_IDS)
   fun testResumeExploration_logsResumeExplorationEventAndNotStartCardEvent() {
     logIntoAnalyticsReadyAdminProfile()
     val checkpoint = createTestExp2CheckpointToState6()
@@ -2289,7 +2278,6 @@ class ExplorationProgressControllerTest {
   }
 
   @Test
-  @EnableFeatureFlag(LOGGING_LEARNER_STUDY_IDS)
   fun testStartOverExploration_logsStartCardAndStartOverEvents() {
     logIntoAnalyticsReadyAdminProfile()
     createTestExp2CheckpointToState6()
@@ -2315,7 +2303,6 @@ class ExplorationProgressControllerTest {
   }
 
   @Test
-  @EnableFeatureFlag(LOGGING_LEARNER_STUDY_IDS)
   fun testPlayExplorationAgain_logsStartCardEvent() {
     logIntoAnalyticsReadyAdminProfile()
     createTestExp2CheckpointToState6()
@@ -2486,7 +2473,6 @@ class ExplorationProgressControllerTest {
   }
 
   @Test
-  @EnableFeatureFlag(LOGGING_LEARNER_STUDY_IDS)
   fun testPlayNewExp_logsStartExplorationEvent() {
     logIntoAnalyticsReadyAdminProfile()
     startPlayingNewExploration(
@@ -2775,7 +2761,6 @@ class ExplorationProgressControllerTest {
   }
 
   @Test
-  @EnableFeatureFlag(LOGGING_LEARNER_STUDY_IDS)
   fun testSubmitAnswer_correctAnswer_logsEndCardAndSubmitAnswerEvents() {
     logIntoAnalyticsReadyAdminProfile()
     startPlayingNewExploration(
@@ -2802,7 +2787,6 @@ class ExplorationProgressControllerTest {
   }
 
   @Test
-  @EnableFeatureFlag(LOGGING_LEARNER_STUDY_IDS)
   fun testSubmitAnswer_wrongAnswer_logsSubmitAnswerEvent_logsProgressSavingSuccessEvent() {
     logIntoAnalyticsReadyAdminProfile()
     startPlayingNewExploration(
@@ -2827,7 +2811,6 @@ class ExplorationProgressControllerTest {
   }
 
   @Test
-  @EnableFeatureFlag(LOGGING_LEARNER_STUDY_IDS)
   fun testMoveToNextState_logsStartCardEvent_logsProgressSavingSuccessEvent() {
     logIntoAnalyticsReadyAdminProfile()
     startPlayingNewExploration(
@@ -2852,7 +2835,6 @@ class ExplorationProgressControllerTest {
   }
 
   @Test
-  @EnableFeatureFlag(LOGGING_LEARNER_STUDY_IDS)
   fun testHint_offered_logsHintOfferedEvent_logsProgressSavingSuccessEvent() {
     logIntoAnalyticsReadyAdminProfile()
     startPlayingNewExploration(
@@ -2887,7 +2869,6 @@ class ExplorationProgressControllerTest {
   }
 
   @Test
-  @EnableFeatureFlag(LOGGING_LEARNER_STUDY_IDS)
   fun testHint_offeredThenViewed_logsRevealedHint_logsPgrssSavSuccEvent_logsExtingHintViwdEvent() {
     logIntoAnalyticsReadyAdminProfile()
     startPlayingNewExploration(
@@ -2922,7 +2903,6 @@ class ExplorationProgressControllerTest {
   }
 
   @Test
-  @EnableFeatureFlag(LOGGING_LEARNER_STUDY_IDS)
   fun testHint_existingHintViewed_logsExistingHintViewedEvent() {
     logIntoAnalyticsReadyAdminProfile()
     startPlayingNewExploration(
@@ -2951,7 +2931,6 @@ class ExplorationProgressControllerTest {
   }
 
   @Test
-  @EnableFeatureFlag(LOGGING_LEARNER_STUDY_IDS)
   fun testHint_lastHintWithNoSolution_offered_logsHintOfferedEvent_logsProgressSavingSuccessEvt() {
     logIntoAnalyticsReadyAdminProfile()
     startPlayingNewExploration(
@@ -2991,7 +2970,6 @@ class ExplorationProgressControllerTest {
   }
 
   @Test
-  @EnableFeatureFlag(LOGGING_LEARNER_STUDY_IDS)
   fun testHint_lastHintWithNoSol_offeredThenViewed_logsRevealedHintEvt_logsPgrssSavingSucssEvt() {
     logIntoAnalyticsReadyAdminProfile()
     startPlayingNewExploration(
@@ -3025,7 +3003,6 @@ class ExplorationProgressControllerTest {
   }
 
   @Test
-  @EnableFeatureFlag(LOGGING_LEARNER_STUDY_IDS)
   fun testSolution_offered_logsSolutionOfferedEvent_logsProgressSavingSuccessEvent() {
     logIntoAnalyticsReadyAdminProfile()
     startPlayingNewExploration(
@@ -3053,7 +3030,6 @@ class ExplorationProgressControllerTest {
   }
 
   @Test
-  @EnableFeatureFlag(LOGGING_LEARNER_STUDY_IDS)
   fun testSolution_offeredThenViewed_logsViewSolutionEvent_logsProgressSavingSuccessEvent() {
     logIntoAnalyticsReadyAdminProfile()
     startPlayingNewExploration(
@@ -3092,7 +3068,6 @@ class ExplorationProgressControllerTest {
   }
 
   @Test
-  @EnableFeatureFlag(LOGGING_LEARNER_STUDY_IDS)
   fun testSolution_viewExistingSolution_logsExistingSolutionViewedEvent() {
     logIntoAnalyticsReadyAdminProfile()
     startPlayingNewExploration(
@@ -3127,7 +3102,6 @@ class ExplorationProgressControllerTest {
   }
 
   @Test
-  @EnableFeatureFlag(LOGGING_LEARNER_STUDY_IDS)
   fun testEndExploration_withoutFinishing_logsExitExplorationEvent() {
     logIntoAnalyticsReadyAdminProfile()
     startPlayingNewExploration(
@@ -3143,7 +3117,6 @@ class ExplorationProgressControllerTest {
   }
 
   @Test
-  @EnableFeatureFlag(LOGGING_LEARNER_STUDY_IDS)
   fun testEndExploration_afterFinishing_logsFinishExplorationEvent() {
     logIntoAnalyticsReadyAdminProfile()
     startPlayingNewExploration(
@@ -3184,7 +3157,6 @@ class ExplorationProgressControllerTest {
   }
 
   @Test
-  @EnableFeatureFlag(LOGGING_LEARNER_STUDY_IDS)
   fun testUpdateLanguageMidLesson_englishToSwahili_logsLanguageSwitchEvent() {
     logIntoAnalyticsReadyAdminProfile()
     updateContentLanguage(profileId, OppiaLanguage.ENGLISH)
@@ -3266,7 +3238,6 @@ class ExplorationProgressControllerTest {
   }
 
   @Test
-  @EnableFeatureFlag(LOGGING_LEARNER_STUDY_IDS)
   fun testUpdateLanguageMidLesson_swahiliToEnglish_logsLanguageSwitchEvent() {
     logIntoAnalyticsReadyAdminProfile()
     updateContentLanguage(profileId, OppiaLanguage.SWAHILI)
@@ -3878,6 +3849,32 @@ class ExplorationProgressControllerTest {
     @LoadLessonProtosFromAssets
     fun provideLoadLessonProtosFromAssets(testEnvironmentConfig: TestEnvironmentConfig): Boolean =
       testEnvironmentConfig.isUsingBazel()
+
+    @Provides
+    @EnableLearnerStudyAnalytics
+    fun provideLearnerStudyAnalytics(): PlatformParameterValue<Boolean> {
+      // Enable the study by default in tests.
+      return PlatformParameterValue.createDefaultParameter(defaultValue = true)
+    }
+
+    @Provides
+    @EnableLoggingLearnerStudyIds
+    fun provideLoggingLearnerStudyIds(): PlatformParameterValue<Boolean> {
+      // Enable study IDs by default in tests.
+      return PlatformParameterValue.createDefaultParameter(defaultValue = true)
+    }
+
+    @Provides
+    @EnableNpsSurvey
+    fun provideEnableNpsSurvey(): PlatformParameterValue<Boolean> {
+      return PlatformParameterValue.createDefaultParameter(defaultValue = true)
+    }
+
+    @Provides
+    @EnableOnboardingFlowV2
+    fun provideEnableOnboardingFlowV2(): PlatformParameterValue<Boolean> {
+      return PlatformParameterValue.createDefaultParameter(defaultValue = true)
+    }
   }
 
   // TODO(#89): Move this to a common test application component.
@@ -3903,16 +3900,12 @@ class ExplorationProgressControllerTest {
       LoggingIdentifierModule::class,
       MathEquationInputModule::class,
       MultipleChoiceInputModule::class,
-      NetworkConfigTestModule::class,
       NetworkConnectionUtilDebugModule::class,
       NumberWithUnitsRuleModule::class,
       NumericExpressionInputModule::class,
       NumericInputRuleModule::class,
-      PlatformParameterTestModule::class,
-      QuestionModule::class,
+      PlatformParameterSingletonModule::class,
       RatioInputModule::class,
-      RetrofitModule::class,
-      RetrofitServiceModule::class,
       RobolectricModule::class,
       SyncStatusModule::class,
       TestAuthenticationModule::class,
@@ -3922,9 +3915,7 @@ class ExplorationProgressControllerTest {
       TextInputRuleModule::class
     ]
   )
-  interface TestApplicationComponent :
-    DataProvidersInjector,
-    PlatformParameterInitializationInjector {
+  interface TestApplicationComponent : DataProvidersInjector {
     @Component.Builder
     interface Builder {
       @BindsInstance
@@ -3936,10 +3927,7 @@ class ExplorationProgressControllerTest {
     fun inject(explorationProgressControllerTest: ExplorationProgressControllerTest)
   }
 
-  class TestApplication :
-    Application(),
-    DataProvidersInjectorProvider,
-    PlatformParameterInitializationInjectorProvider {
+  class TestApplication : Application(), DataProvidersInjectorProvider {
     private val component: TestApplicationComponent by lazy {
       DaggerExplorationProgressControllerTest_TestApplicationComponent.builder()
         .setApplication(this)
@@ -3951,8 +3939,6 @@ class ExplorationProgressControllerTest {
     }
 
     override fun getDataProvidersInjector(): DataProvidersInjector = component
-
-    override fun getPlatformParameterInitializationInjector() = component
   }
 
   private companion object {

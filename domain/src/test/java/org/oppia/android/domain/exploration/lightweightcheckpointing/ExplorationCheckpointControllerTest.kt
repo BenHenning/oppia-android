@@ -11,7 +11,6 @@ import dagger.Component
 import dagger.Module
 import dagger.Provides
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.oppia.android.app.model.CheckpointState
@@ -20,9 +19,6 @@ import org.oppia.android.app.model.HelpIndex.IndexTypeCase.NEXT_AVAILABLE_HINT_I
 import org.oppia.android.app.model.InteractionObject
 import org.oppia.android.app.model.ProfileId
 import org.oppia.android.app.model.UserAnswer
-import org.oppia.android.data.backends.gae.RetrofitModule
-import org.oppia.android.data.backends.gae.RetrofitServiceModule
-import org.oppia.android.data.backends.gae.testing.NetworkConfigTestModule
 import org.oppia.android.domain.classify.InteractionsModule
 import org.oppia.android.domain.classify.rules.algebraicexpressioninput.AlgebraicExpressionInputModule
 import org.oppia.android.domain.classify.rules.continueinteraction.ContinueModule
@@ -49,13 +45,10 @@ import org.oppia.android.domain.hintsandsolution.HintsAndSolutionProdModule
 import org.oppia.android.domain.oppialogger.LogStorageModule
 import org.oppia.android.domain.oppialogger.LoggingIdentifierModule
 import org.oppia.android.domain.oppialogger.analytics.ApplicationLifecycleModule
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjector
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjectorProvider
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterTestModule
-import org.oppia.android.domain.question.QuestionModule
+import org.oppia.android.domain.platformparameter.PlatformParameterModule
+import org.oppia.android.domain.platformparameter.PlatformParameterSingletonModule
 import org.oppia.android.domain.topic.FRACTIONS_EXPLORATION_ID_0
 import org.oppia.android.domain.topic.FRACTIONS_EXPLORATION_ID_1
-import org.oppia.android.testing.OppiaTestRule
 import org.oppia.android.testing.TestLogReportingModule
 import org.oppia.android.testing.data.DataProviderTestMonitor
 import org.oppia.android.testing.environment.TestEnvironmentConfig
@@ -115,8 +108,6 @@ private const val TEST_CHECKPOINTING_FAKE_EXP_ID = "test_checkpointing_fake_expl
 @LooperMode(LooperMode.Mode.PAUSED)
 @Config(application = ExplorationCheckpointControllerTest.TestApplication::class)
 class ExplorationCheckpointControllerTest {
-  @get:Rule val oppiaTestRule = OppiaTestRule()
-
   @Inject lateinit var testCoroutineDispatchers: TestCoroutineDispatchers
   @Inject lateinit var context: Context
   @Inject lateinit var fakeOppiaClock: FakeOppiaClock
@@ -1007,16 +998,13 @@ class ExplorationCheckpointControllerTest {
       LoggingIdentifierModule::class,
       MathEquationInputModule::class,
       MultipleChoiceInputModule::class,
-      NetworkConfigTestModule::class,
       NetworkConnectionUtilDebugModule::class,
       NumberWithUnitsRuleModule::class,
       NumericExpressionInputModule::class,
       NumericInputRuleModule::class,
-      PlatformParameterTestModule::class,
-      QuestionModule::class,
+      PlatformParameterModule::class,
+      PlatformParameterSingletonModule::class,
       RatioInputModule::class,
-      RetrofitModule::class,
-      RetrofitServiceModule::class,
       RobolectricModule::class,
       SyncStatusModule::class,
       TestAuthenticationModule::class,
@@ -1026,9 +1014,7 @@ class ExplorationCheckpointControllerTest {
       TextInputRuleModule::class
     ]
   )
-  interface TestApplicationComponent :
-    DataProvidersInjector,
-    PlatformParameterInitializationInjector {
+  interface TestApplicationComponent : DataProvidersInjector {
     @Component.Builder
     interface Builder {
       @BindsInstance
@@ -1039,10 +1025,7 @@ class ExplorationCheckpointControllerTest {
     fun inject(explorationCheckpointControllerTest: ExplorationCheckpointControllerTest)
   }
 
-  class TestApplication :
-    Application(),
-    DataProvidersInjectorProvider,
-    PlatformParameterInitializationInjectorProvider {
+  class TestApplication : Application(), DataProvidersInjectorProvider {
     private val component: TestApplicationComponent by lazy {
       DaggerExplorationCheckpointControllerTest_TestApplicationComponent.builder()
         .setApplication(this)
@@ -1054,7 +1037,5 @@ class ExplorationCheckpointControllerTest {
     }
 
     override fun getDataProvidersInjector(): DataProvidersInjector = component
-
-    override fun getPlatformParameterInitializationInjector() = component
   }
 }

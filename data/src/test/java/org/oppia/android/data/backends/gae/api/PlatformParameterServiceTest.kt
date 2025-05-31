@@ -11,7 +11,6 @@ import dagger.Module
 import dagger.Provides
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.oppia.android.data.backends.gae.RetrofitModule
@@ -23,13 +22,6 @@ import org.oppia.android.data.backends.gae.model.GaePlatformParameterValue.Strin
 import org.oppia.android.data.backends.gae.testing.NetworkConfigTestModule
 import org.oppia.android.data.backends.gae.testing.PlatformParameterServiceTestOrchestrator
 import org.oppia.android.data.backends.gae.testing.PlatformParameterServiceTestOrchestrator.Companion.REMOTE_PLATFORM_PARAMETERS_WITH_UNSUPPORTED_TYPE
-import org.oppia.android.testing.OppiaTestRule
-import org.oppia.android.testing.network.MockPlatformParameterService.Companion.TEST_BOOLEAN_PARAM_NAME
-import org.oppia.android.testing.network.MockPlatformParameterService.Companion.TEST_BOOLEAN_PARAM_SERVER_VALUE
-import org.oppia.android.testing.network.MockPlatformParameterService.Companion.TEST_INTEGER_PARAM_NAME
-import org.oppia.android.testing.network.MockPlatformParameterService.Companion.TEST_INTEGER_PARAM_SERVER_VALUE
-import org.oppia.android.testing.network.MockPlatformParameterService.Companion.TEST_STRING_PARAM_NAME
-import org.oppia.android.testing.network.MockPlatformParameterService.Companion.TEST_STRING_PARAM_SERVER_VALUE
 import org.oppia.android.testing.platformparameter.TEST_BOOLEAN_PARAM_NAME
 import org.oppia.android.testing.platformparameter.TEST_BOOLEAN_PARAM_SERVER_VALUE
 import org.oppia.android.testing.platformparameter.TEST_INTEGER_PARAM_NAME
@@ -55,8 +47,6 @@ import javax.inject.Singleton
 // Function name: test names are conventionally named with underscores.
 @Suppress("FunctionName")
 class PlatformParameterServiceTest {
-  @get:Rule val oppiaTestRule = OppiaTestRule()
-
   @Inject lateinit var parameterService: PlatformParameterService
   @Inject lateinit var serviceOrchestrator: PlatformParameterServiceTestOrchestrator
   @Inject lateinit var mockWebServer: MockWebServer

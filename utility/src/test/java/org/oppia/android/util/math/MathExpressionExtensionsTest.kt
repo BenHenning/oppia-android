@@ -1,12 +1,10 @@
 package org.oppia.android.util.math
 
 import com.google.common.truth.Truth.assertThat
-import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.oppia.android.app.model.MathEquation
 import org.oppia.android.app.model.MathExpression
-import org.oppia.android.testing.OppiaTestRule
 import org.oppia.android.testing.junit.OppiaParameterizedTestRunner
 import org.oppia.android.testing.junit.OppiaParameterizedTestRunner.Iteration
 import org.oppia.android.testing.junit.OppiaParameterizedTestRunner.Parameter
@@ -39,9 +37,6 @@ import org.robolectric.annotation.LooperMode
 @SelectRunnerPlatform(ParameterizedJunitTestRunner::class)
 @LooperMode(LooperMode.Mode.PAUSED)
 class MathExpressionExtensionsTest {
-  @get:Rule
-  val oppiaTestRule = OppiaTestRule()
-
   @Parameter lateinit var exp1: String
   @Parameter lateinit var exp2: String
 

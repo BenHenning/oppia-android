@@ -10,7 +10,6 @@ import dagger.Component
 import dagger.Module
 import dagger.Provides
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.oppia.android.app.model.ExplorationCheckpoint
@@ -34,13 +33,11 @@ import org.oppia.android.domain.exploration.lightweightcheckpointing.Exploration
 import org.oppia.android.domain.oppialogger.LogStorageModule
 import org.oppia.android.domain.oppialogger.LoggingIdentifierModule
 import org.oppia.android.domain.oppialogger.analytics.ApplicationLifecycleModule
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjector
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjectorProvider
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterTestModule
+import org.oppia.android.domain.platformparameter.PlatformParameterModule
+import org.oppia.android.domain.platformparameter.PlatformParameterSingletonModule
 import org.oppia.android.domain.topic.FRACTIONS_EXPLORATION_ID_0
 import org.oppia.android.domain.topic.FRACTIONS_EXPLORATION_ID_1
 import org.oppia.android.domain.topic.RATIOS_EXPLORATION_ID_0
-import org.oppia.android.testing.OppiaTestRule
 import org.oppia.android.testing.TestLogReportingModule
 import org.oppia.android.testing.data.DataProviderTestMonitor
 import org.oppia.android.testing.environment.TestEnvironmentConfig
@@ -72,9 +69,6 @@ import javax.inject.Singleton
 @LooperMode(LooperMode.Mode.PAUSED)
 @Config(application = ExplorationCheckpointTestHelperTest.TestApplication::class)
 class ExplorationCheckpointTestHelperTest {
-  @get:Rule
-  val oppiaTestRule = OppiaTestRule()
-
   @Inject lateinit var context: Context
   @Inject lateinit var fakeOppiaClock: FakeOppiaClock
   @Inject lateinit var explorationCheckpointTestHelper: ExplorationCheckpointTestHelper
@@ -273,7 +267,8 @@ class ExplorationCheckpointTestHelperTest {
       NumberWithUnitsRuleModule::class,
       NumericExpressionInputModule::class,
       NumericInputRuleModule::class,
-      PlatformParameterTestModule::class,
+      PlatformParameterModule::class,
+      PlatformParameterSingletonModule::class,
       RatioInputModule::class,
       RobolectricModule::class,
       SyncStatusModule::class,
@@ -283,9 +278,7 @@ class ExplorationCheckpointTestHelperTest {
       TextInputRuleModule::class
     ]
   )
-  interface TestApplicationComponent :
-    DataProvidersInjector,
-    PlatformParameterInitializationInjector {
+  interface TestApplicationComponent : DataProvidersInjector {
     @Component.Builder
     interface Builder {
       @BindsInstance
@@ -297,10 +290,7 @@ class ExplorationCheckpointTestHelperTest {
     fun inject(explorationCheckpointTestHelperTest: ExplorationCheckpointTestHelperTest)
   }
 
-  class TestApplication :
-    Application(),
-    DataProvidersInjectorProvider,
-    PlatformParameterInitializationInjectorProvider {
+  class TestApplication : Application(), DataProvidersInjectorProvider {
     private val component: TestApplicationComponent by lazy {
       DaggerExplorationCheckpointTestHelperTest_TestApplicationComponent.builder()
         .setApplication(this)
@@ -312,7 +302,5 @@ class ExplorationCheckpointTestHelperTest {
     }
 
     override fun getDataProvidersInjector(): DataProvidersInjector = component
-
-    override fun getPlatformParameterInitializationInjector() = component
   }
 }

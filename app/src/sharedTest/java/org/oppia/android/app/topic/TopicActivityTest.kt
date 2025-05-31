@@ -35,7 +35,6 @@ import org.oppia.android.app.application.ApplicationStartupListenerModule
 import org.oppia.android.app.application.testing.TestingBuildFlavorModule
 import org.oppia.android.app.devoptions.DeveloperOptionsModule
 import org.oppia.android.app.devoptions.DeveloperOptionsStarterModule
-import org.oppia.android.app.model.FeatureFlagId.EXTRA_TOPIC_TABS_UI
 import org.oppia.android.app.model.ProfileId
 import org.oppia.android.app.model.ScreenName
 import org.oppia.android.app.model.Spotlight.FeatureCase.FIRST_CHAPTER
@@ -76,21 +75,19 @@ import org.oppia.android.domain.oppialogger.analytics.ApplicationLifecycleModule
 import org.oppia.android.domain.oppialogger.analytics.CpuPerformanceSnapshotterModule
 import org.oppia.android.domain.oppialogger.logscheduler.MetricLogSchedulerModule
 import org.oppia.android.domain.oppialogger.loguploader.LogReportWorkerModule
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjector
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjectorProvider
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterTestModule
+import org.oppia.android.domain.platformparameter.PlatformParameterSingletonModule
 import org.oppia.android.domain.question.QuestionModule
 import org.oppia.android.domain.spotlight.SpotlightStateController
 import org.oppia.android.domain.topic.FRACTIONS_STORY_ID_0
 import org.oppia.android.domain.topic.FRACTIONS_TOPIC_ID
 import org.oppia.android.domain.workmanager.WorkManagerConfigurationModule
-import org.oppia.android.testing.EnableFeatureFlag
 import org.oppia.android.testing.OppiaTestRule
 import org.oppia.android.testing.RunOn
 import org.oppia.android.testing.TestLogReportingModule
 import org.oppia.android.testing.TestPlatform
 import org.oppia.android.testing.firebase.TestAuthenticationModule
 import org.oppia.android.testing.junit.InitializeDefaultLocaleRule
+import org.oppia.android.testing.platformparameter.TestPlatformParameterModule
 import org.oppia.android.testing.robolectric.RobolectricModule
 import org.oppia.android.testing.threading.TestCoroutineDispatchers
 import org.oppia.android.testing.threading.TestDispatcherModule
@@ -172,8 +169,8 @@ class TopicActivityTest {
   }
 
   @Test
-  @EnableFeatureFlag(EXTRA_TOPIC_TABS_UI)
   fun testTopicActivity_hasCorrectActivityLabel() {
+    TestPlatformParameterModule.forceEnableExtraTopicTabsUi(true)
     launchTopicActivity(
       profileId, TEST_CLASSROOM_ID_1, FRACTIONS_TOPIC_ID
     ).use { scenario ->
@@ -188,8 +185,8 @@ class TopicActivityTest {
 
   @Test
   @RunOn(TestPlatform.ROBOLECTRIC) // TODO(#3858): Enable for Espresso.
-  @EnableFeatureFlag(EXTRA_TOPIC_TABS_UI)
   fun testTopicActivity_startPracticeSession_questionActivityStartedWithProfileId() {
+    TestPlatformParameterModule.forceEnableExtraTopicTabsUi(true)
     launchTopicActivity(profileId, TEST_CLASSROOM_ID_1, FRACTIONS_TOPIC_ID).use {
       // Open the practice tab and select a skill.
       onView(withText("Practice")).perform(click())
@@ -279,7 +276,7 @@ class TopicActivityTest {
       NumberWithUnitsRuleModule::class,
       NumericExpressionInputModule::class,
       NumericInputRuleModule::class,
-      PlatformParameterTestModule::class,
+      PlatformParameterSingletonModule::class,
       QuestionModule::class,
       RatioInputModule::class,
       RetrofitModule::class,
@@ -290,15 +287,14 @@ class TopicActivityTest {
       TestAuthenticationModule::class,
       TestDispatcherModule::class,
       TestLogReportingModule::class,
+      TestPlatformParameterModule::class,
       TestingBuildFlavorModule::class,
       TextInputRuleModule::class,
       ViewBindingShimModule::class,
       WorkManagerConfigurationModule::class
     ]
   )
-  interface TestApplicationComponent :
-    ApplicationComponent,
-    PlatformParameterInitializationInjector {
+  interface TestApplicationComponent : ApplicationComponent {
     @Component.Builder
     interface Builder : ApplicationComponent.Builder {
       override fun build(): TestApplicationComponent
@@ -307,11 +303,7 @@ class TopicActivityTest {
     fun inject(topicActivityTest: TopicActivityTest)
   }
 
-  class TestApplication :
-    Application(),
-    ActivityComponentFactory,
-    ApplicationInjectorProvider,
-    PlatformParameterInitializationInjectorProvider {
+  class TestApplication : Application(), ActivityComponentFactory, ApplicationInjectorProvider {
     private val component: TestApplicationComponent by lazy {
       DaggerTopicActivityTest_TestApplicationComponent.builder()
         .setApplication(this)
@@ -327,7 +319,5 @@ class TopicActivityTest {
     }
 
     override fun getApplicationInjector(): ApplicationInjector = component
-
-    override fun getPlatformParameterInitializationInjector() = component
   }
 }

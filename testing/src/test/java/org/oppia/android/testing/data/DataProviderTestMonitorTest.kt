@@ -14,14 +14,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.exceptions.verification.NeverWantedButInvoked
 import org.oppia.android.domain.oppialogger.LogStorageModule
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjector
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjectorProvider
-import org.oppia.android.testing.OppiaTestRule
 import org.oppia.android.testing.TestLogReportingModule
 import org.oppia.android.testing.assertThrows
 import org.oppia.android.testing.data.AsyncResultSubject.Companion.assertThat
@@ -53,9 +49,6 @@ import javax.inject.Singleton
 @LooperMode(LooperMode.Mode.PAUSED)
 @Config(application = DataProviderTestMonitorTest.TestApplication::class)
 class DataProviderTestMonitorTest {
-  @get:Rule
-  val oppiaTestRule = OppiaTestRule()
-
   @Inject lateinit var monitorFactory: DataProviderTestMonitor.Factory
   @Inject lateinit var dataProviders: DataProviders
   @Inject lateinit var asyncDataSubscriptionManager: AsyncDataSubscriptionManager
@@ -1153,9 +1146,7 @@ class DataProviderTestMonitorTest {
       TestModule::class
     ]
   )
-  interface TestApplicationComponent :
-    DataProvidersInjector,
-    PlatformParameterInitializationInjector {
+  interface TestApplicationComponent : DataProvidersInjector {
     @Component.Builder
     interface Builder {
       @BindsInstance
@@ -1167,10 +1158,7 @@ class DataProviderTestMonitorTest {
     fun inject(dataProviderTestMonitorTest: DataProviderTestMonitorTest)
   }
 
-  class TestApplication :
-    Application(),
-    DataProvidersInjectorProvider,
-    PlatformParameterInitializationInjectorProvider {
+  class TestApplication : Application(), DataProvidersInjectorProvider {
     private val component: TestApplicationComponent by lazy {
       DaggerDataProviderTestMonitorTest_TestApplicationComponent.builder()
         .setApplication(this)
@@ -1182,7 +1170,5 @@ class DataProviderTestMonitorTest {
     }
 
     override fun getDataProvidersInjector(): DataProvidersInjector = component
-
-    override fun getPlatformParameterInitializationInjector() = component
   }
 }

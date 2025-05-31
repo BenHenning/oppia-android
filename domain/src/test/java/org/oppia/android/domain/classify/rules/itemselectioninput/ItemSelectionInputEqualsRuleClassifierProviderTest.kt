@@ -7,13 +7,11 @@ import com.google.common.truth.Truth.assertThat
 import dagger.BindsInstance
 import dagger.Component
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.oppia.android.domain.classify.ClassificationContext
 import org.oppia.android.domain.classify.InteractionObjectTestBuilder.createSetOfTranslatableHtmlContentIds
 import org.oppia.android.domain.classify.RuleClassifier
-import org.oppia.android.testing.OppiaTestRule
 import org.oppia.android.testing.assertThrows
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.LooperMode
@@ -26,8 +24,6 @@ import javax.inject.Singleton
 @LooperMode(LooperMode.Mode.PAUSED)
 @Config(manifest = Config.NONE)
 class ItemSelectionInputEqualsRuleClassifierProviderTest {
-  @get:Rule
-  val oppiaTestRule = OppiaTestRule()
 
   private val TEST_HTML_STRING_SET_LOWERCASE = createSetOfTranslatableHtmlContentIds("item ab")
   private val TEST_HTML_STRING_SET_UPPERCASE = createSetOfTranslatableHtmlContentIds("item AB")

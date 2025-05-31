@@ -12,7 +12,6 @@ import dagger.Component
 import dagger.Module
 import dagger.Provides
 import org.junit.Assert.fail
-import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -24,12 +23,7 @@ import org.mockito.Mockito.verify
 import org.mockito.junit.MockitoJUnit
 import org.mockito.junit.MockitoRule
 import org.oppia.android.app.model.Exploration
-import org.oppia.android.app.model.FeatureFlagId.LEARNER_STUDY_ANALYTICS
-import org.oppia.android.app.model.FeatureFlagId.LOGGING_LEARNER_STUDY_IDS
 import org.oppia.android.app.model.ProfileId
-import org.oppia.android.data.backends.gae.RetrofitModule
-import org.oppia.android.data.backends.gae.RetrofitServiceModule
-import org.oppia.android.data.backends.gae.testing.NetworkConfigTestModule
 import org.oppia.android.domain.audio.AudioPlayerController.PlayProgress
 import org.oppia.android.domain.audio.AudioPlayerController.PlayStatus
 import org.oppia.android.domain.classify.InteractionsModule
@@ -55,16 +49,11 @@ import org.oppia.android.domain.hintsandsolution.HintsAndSolutionProdModule
 import org.oppia.android.domain.oppialogger.LogStorageModule
 import org.oppia.android.domain.oppialogger.LoggingIdentifierModule
 import org.oppia.android.domain.oppialogger.analytics.ApplicationLifecycleModule
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjector
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjectorProvider
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterTestModule
+import org.oppia.android.domain.platformparameter.PlatformParameterSingletonModule
 import org.oppia.android.domain.profile.ProfileManagementController
-import org.oppia.android.domain.question.QuestionModule
 import org.oppia.android.domain.topic.TEST_EXPLORATION_ID_5
-import org.oppia.android.testing.EnableFeatureFlag
 import org.oppia.android.testing.FakeAnalyticsEventLogger
 import org.oppia.android.testing.FakeExceptionLogger
-import org.oppia.android.testing.OppiaTestRule
 import org.oppia.android.testing.TestLogReportingModule
 import org.oppia.android.testing.assertThrows
 import org.oppia.android.testing.data.AsyncResultSubject.Companion.assertThat
@@ -84,6 +73,11 @@ import org.oppia.android.util.locale.LocaleProdModule
 import org.oppia.android.util.logging.LoggerModule
 import org.oppia.android.util.logging.SyncStatusModule
 import org.oppia.android.util.networking.NetworkConnectionUtilDebugModule
+import org.oppia.android.util.platformparameter.EnableLearnerStudyAnalytics
+import org.oppia.android.util.platformparameter.EnableLoggingLearnerStudyIds
+import org.oppia.android.util.platformparameter.EnableNpsSurvey
+import org.oppia.android.util.platformparameter.EnableOnboardingFlowV2
+import org.oppia.android.util.platformparameter.PlatformParameterValue
 import org.robolectric.Shadows
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.LooperMode
@@ -93,18 +87,14 @@ import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/** Tests for [AudioPlayerController]. */
+/** Tests for [AudioPlayerControllerTest]. */
 // FunctionName: test names are conventionally named with underscores.
 // SameParameterValue: tests should have specific context included/excluded for readability.
 @Suppress("FunctionName", "SameParameterValue")
 @RunWith(AndroidJUnit4::class)
 @LooperMode(LooperMode.Mode.PAUSED)
 @Config(application = AudioPlayerControllerTest.TestApplication::class)
-@EnableFeatureFlag(LEARNER_STUDY_ANALYTICS)
-@EnableFeatureFlag(LOGGING_LEARNER_STUDY_IDS)
 class AudioPlayerControllerTest {
-  @get:Rule
-  val oppiaTestRule = OppiaTestRule()
 
   @field:[Rule JvmField] val mockitoRule: MockitoRule = MockitoJUnit.rule()
   @Mock lateinit var mockAudioPlayerObserver: Observer<AsyncResult<PlayProgress>>
@@ -127,13 +117,9 @@ class AudioPlayerControllerTest {
 
   private val profileId by lazy { ProfileId.newBuilder().apply { internalId = 0 }.build() }
 
-  @Before
-  fun setUp() {
-    setUpMediaReadyApplication()
-  }
-
   @Test
   fun testController_initializePlayer_invokePrepared_reportsSuccessfulInit() {
+    setUpMediaReadyApplication()
     audioPlayerController.initializeMediaPlayer()
     audioPlayerController.changeDataSource(TEST_URL, contentId = null, languageCode = "en")
 
@@ -145,6 +131,7 @@ class AudioPlayerControllerTest {
 
   @Test
   fun testController_preparePlayer_invokePlay_checkIsPlaying() {
+    setUpMediaReadyApplication()
     arrangeMediaPlayer()
 
     audioPlayerController.play(isPlayingFromAutoPlay = false, reloadingMainContent = false)
@@ -154,6 +141,7 @@ class AudioPlayerControllerTest {
 
   @Test
   fun testController_preparePlayer_invokePause_checkNotIsPlaying() {
+    setUpMediaReadyApplication()
     arrangeMediaPlayer()
 
     audioPlayerController.pause(isFromExplicitUserAction = true)
@@ -163,6 +151,7 @@ class AudioPlayerControllerTest {
 
   @Test
   fun testController_preparePlayer_invokeSeekTo_hasCorrectProgress() {
+    setUpMediaReadyApplication()
     arrangeMediaPlayer()
 
     audioPlayerController.seekTo(500)
@@ -173,6 +162,7 @@ class AudioPlayerControllerTest {
 
   @Test
   fun testController_preparePlayer_releaseMediaPlayer_hasEndState() {
+    setUpMediaReadyApplication()
     arrangeMediaPlayer()
 
     audioPlayerController.releaseMediaPlayer()
@@ -182,6 +172,7 @@ class AudioPlayerControllerTest {
 
   @Test
   fun testController_preparePlayer_invokePrepare_capturesPreparedState() {
+    setUpMediaReadyApplication()
     arrangeMediaPlayer()
 
     verify(mockAudioPlayerObserver, atLeastOnce()).onChanged(audioPlayerResultCaptor.capture())
@@ -192,6 +183,7 @@ class AudioPlayerControllerTest {
 
   @Test
   fun testController_releasePlayer_initializePlayer_capturesPendingState() {
+    setUpMediaReadyApplication()
     audioPlayerController.initializeMediaPlayer()
 
     audioPlayerController.releaseMediaPlayer()
@@ -204,6 +196,7 @@ class AudioPlayerControllerTest {
 
   @Test
   fun tesObserver_preparePlayer_invokeCompletion_capturesCompletedState() {
+    setUpMediaReadyApplication()
     arrangeMediaPlayer()
 
     shadowMediaPlayer.invokeCompletionListener()
@@ -217,6 +210,7 @@ class AudioPlayerControllerTest {
 
   @Test
   fun testObserver_preparePlayer_invokeChangeDataSource_capturesPendingState() {
+    setUpMediaReadyApplication()
     arrangeMediaPlayer()
 
     audioPlayerController.changeDataSource(TEST_URL2, contentId = null, languageCode = "en")
@@ -227,6 +221,7 @@ class AudioPlayerControllerTest {
 
   @Test
   fun testObserver_preparePlayer_invokeChangeDataSourceAfterPlay_capturesPendingState() {
+    setUpMediaReadyApplication()
     arrangeMediaPlayer()
 
     audioPlayerController.play(isPlayingFromAutoPlay = false, reloadingMainContent = false)
@@ -238,6 +233,7 @@ class AudioPlayerControllerTest {
 
   @Test
   fun testObserver_preparePlayer_invokePlay_capturesPlayingState() {
+    setUpMediaReadyApplication()
     arrangeMediaPlayer()
 
     audioPlayerController.play(isPlayingFromAutoPlay = false, reloadingMainContent = false)
@@ -251,6 +247,7 @@ class AudioPlayerControllerTest {
 
   @Test
   fun testObserver_preparePlayer_invokePlayAndAdvance_capturesManyPlayingStates() {
+    setUpMediaReadyApplication()
     arrangeMediaPlayer()
 
     // Wait for 1 second for the player to enter a playing state, then forcibly trigger completion.
@@ -274,6 +271,7 @@ class AudioPlayerControllerTest {
 
   @Test
   fun testObserver_preparePlayer_invokePause_capturesPausedState() {
+    setUpMediaReadyApplication()
     arrangeMediaPlayer()
 
     audioPlayerController.play(isPlayingFromAutoPlay = false, reloadingMainContent = false)
@@ -287,6 +285,7 @@ class AudioPlayerControllerTest {
 
   @Test
   fun testObserver_preparePlayer_invokePrepared_capturesCorrectPosition() {
+    setUpMediaReadyApplication()
     arrangeMediaPlayer()
 
     verify(mockAudioPlayerObserver, atLeastOnce()).onChanged(audioPlayerResultCaptor.capture())
@@ -297,6 +296,7 @@ class AudioPlayerControllerTest {
 
   @Test
   fun testObserver_preparePlayer_invokeSeekTo_capturesCorrectPosition() {
+    setUpMediaReadyApplication()
     arrangeMediaPlayer()
 
     audioPlayerController.seekTo(500)
@@ -312,6 +312,7 @@ class AudioPlayerControllerTest {
 
   @Test
   fun testObserver_preparePlayer_invokePlay_capturesCorrectDuration() {
+    setUpMediaReadyApplication()
     arrangeMediaPlayer()
 
     audioPlayerController.play(isPlayingFromAutoPlay = false, reloadingMainContent = false)
@@ -324,6 +325,7 @@ class AudioPlayerControllerTest {
 
   @Test
   fun testObserver_preparePlayer_invokeChangeDataSource_capturesCorrectPosition() {
+    setUpMediaReadyApplication()
     arrangeMediaPlayer()
 
     audioPlayerController.seekTo(500)
@@ -339,6 +341,7 @@ class AudioPlayerControllerTest {
 
   @Test
   fun testObserver_observeInitPlayer_releasePlayer_initPlayer_checkNoNewUpdates() {
+    setUpMediaReadyApplication()
     arrangeMediaPlayer()
 
     audioPlayerController.releaseMediaPlayer()
@@ -353,6 +356,7 @@ class AudioPlayerControllerTest {
 
   @Test
   fun testScheduling_preparePlayer_invokePauseAndAdvance_verifyTestDoesNotHang() {
+    setUpMediaReadyApplication()
     arrangeMediaPlayer()
 
     audioPlayerController.play(isPlayingFromAutoPlay = false, reloadingMainContent = false)
@@ -369,6 +373,7 @@ class AudioPlayerControllerTest {
 
   @Test
   fun testScheduling_preparePlayer_invokeCompletionAndAdvance_verifyTestDoesNotHang() {
+    setUpMediaReadyApplication()
     arrangeMediaPlayer()
 
     audioPlayerController.play(isPlayingFromAutoPlay = false, reloadingMainContent = false)
@@ -385,6 +390,7 @@ class AudioPlayerControllerTest {
 
   @Test
   fun testScheduling_observeData_removeObserver_verifyTestDoesNotHang() {
+    setUpMediaReadyApplication()
     val playProgress = audioPlayerController.initializeMediaPlayer()
     audioPlayerController.changeDataSource(TEST_URL, contentId = null, languageCode = "en")
     testCoroutineDispatchers.runCurrent()
@@ -399,6 +405,7 @@ class AudioPlayerControllerTest {
 
   @Test
   fun testScheduling_addAndRemoveObservers_verifyTestDoesNotHang() {
+    setUpMediaReadyApplication()
     val playProgress =
       audioPlayerController.initializeMediaPlayer()
     audioPlayerController.changeDataSource(TEST_URL, contentId = null, languageCode = "en")
@@ -416,6 +423,7 @@ class AudioPlayerControllerTest {
 
   @Test
   fun testController_invokeErrorListener_invokePrepared_verifyAudioStatusIsFailure() {
+    setUpMediaReadyApplication()
     audioPlayerController.initializeMediaPlayer().observeForever(mockAudioPlayerObserver)
     audioPlayerController.changeDataSource(TEST_URL, contentId = null, languageCode = "en")
 
@@ -428,6 +436,7 @@ class AudioPlayerControllerTest {
 
   @Test
   fun testController_notInitialized_releasePlayer_fails() {
+    setUpMediaReadyApplication()
     val exception = assertThrows<IllegalStateException>() {
       audioPlayerController.releaseMediaPlayer()
     }
@@ -438,6 +447,7 @@ class AudioPlayerControllerTest {
 
   @Test
   fun testController_releasePlayerMultipleTimes_doesNoThrowException() {
+    setUpMediaReadyApplication()
     audioPlayerController.initializeMediaPlayer()
 
     assertNoExceptionIsThrown {
@@ -448,6 +458,7 @@ class AudioPlayerControllerTest {
 
   @Test
   fun testError_notPrepared_invokePlay_fails() {
+    setUpMediaReadyApplication()
     val exception = assertThrows<IllegalStateException>() {
       audioPlayerController.play(isPlayingFromAutoPlay = false, reloadingMainContent = false)
     }
@@ -457,6 +468,7 @@ class AudioPlayerControllerTest {
 
   @Test
   fun testError_notPrepared_invokePause_fails() {
+    setUpMediaReadyApplication()
     val exception = assertThrows<IllegalStateException>() {
       audioPlayerController.pause(isFromExplicitUserAction = true)
     }
@@ -466,6 +478,7 @@ class AudioPlayerControllerTest {
 
   @Test
   fun testError_notPrepared_invokeSeekTo_fails() {
+    setUpMediaReadyApplication()
     val exception = assertThrows<IllegalStateException>() {
       audioPlayerController.seekTo(500)
     }
@@ -475,6 +488,7 @@ class AudioPlayerControllerTest {
 
   @Test
   fun testController_initializePlayer_invokePrepared_reportsFailure_logsException() {
+    setUpMediaReadyApplication()
     audioPlayerController.initializeMediaPlayer()
     audioPlayerController.changeDataSource(TEST_FAIL_URL, contentId = null, languageCode = "en")
 
@@ -486,8 +500,8 @@ class AudioPlayerControllerTest {
   }
 
   @Test
-  @EnableFeatureFlag(LOGGING_LEARNER_STUDY_IDS)
   fun testPlay_prepared_reloadingMainContent_autoPlaying_studyOn_doesNotLogPlayEvent() {
+    setUpMediaReadyApplicationWithLearnerStudy()
     arrangeMediaPlayer(contentId = "test_content_id")
 
     audioPlayerController.play(isPlayingFromAutoPlay = true, reloadingMainContent = true)
@@ -499,8 +513,8 @@ class AudioPlayerControllerTest {
   }
 
   @Test
-  @EnableFeatureFlag(LOGGING_LEARNER_STUDY_IDS)
   fun testPlay_prepared_reloadingMainContent_notAutoPlaying_studyOn_logsPlayEvent() {
+    setUpMediaReadyApplicationWithLearnerStudy()
     val explorationId = TEST_EXPLORATION_ID_5
     arrangeMediaPlayer(contentId = "test_content_id")
     logIntoAnalyticsReadyAdminProfile()
@@ -537,8 +551,8 @@ class AudioPlayerControllerTest {
   }
 
   @Test
-  @EnableFeatureFlag(LOGGING_LEARNER_STUDY_IDS)
   fun testPlay_prepared_notReloadingMainContent_autoPlaying_studyOn_logsPlayEvent() {
+    setUpMediaReadyApplicationWithLearnerStudy()
     val explorationId = TEST_EXPLORATION_ID_5
     arrangeMediaPlayer(contentId = "test_content_id")
     logIntoAnalyticsReadyAdminProfile()
@@ -575,8 +589,8 @@ class AudioPlayerControllerTest {
   }
 
   @Test
-  @EnableFeatureFlag(LOGGING_LEARNER_STUDY_IDS)
   fun testPlay_prepared_notReloadingMainContent_notAutoPlaying_studyOn_logsPlayEvent() {
+    setUpMediaReadyApplicationWithLearnerStudy()
     val explorationId = TEST_EXPLORATION_ID_5
     arrangeMediaPlayer(contentId = "test_content_id", languageCode = "sw")
     logIntoAnalyticsReadyAdminProfile()
@@ -613,8 +627,8 @@ class AudioPlayerControllerTest {
   }
 
   @Test
-  @EnableFeatureFlag(LOGGING_LEARNER_STUDY_IDS)
   fun testPlay_prepared_missingContentId_studyOn_logsPlayEventWithoutContentId() {
+    setUpMediaReadyApplicationWithLearnerStudy()
     val explorationId = TEST_EXPLORATION_ID_5
     arrangeMediaPlayer(contentId = null)
     logIntoAnalyticsReadyAdminProfile()
@@ -634,8 +648,8 @@ class AudioPlayerControllerTest {
   }
 
   @Test
-  @EnableFeatureFlag(LOGGING_LEARNER_STUDY_IDS)
   fun testPlay_prepared_outsideExploration_studyOn_doesNotLogEvent() {
+    setUpMediaReadyApplicationWithLearnerStudy()
     arrangeMediaPlayer(contentId = "test_content_id")
     logIntoAnalyticsReadyAdminProfile()
 
@@ -648,8 +662,8 @@ class AudioPlayerControllerTest {
   }
 
   @Test
-  @EnableFeatureFlag(LOGGING_LEARNER_STUDY_IDS)
   fun testPause_playing_explicitUserAction_studyOn_logsPauseEvent() {
+    setUpMediaReadyApplicationWithLearnerStudy()
     val explorationId = TEST_EXPLORATION_ID_5
     arrangeMediaPlayer(contentId = "test_content_id", languageCode = "sw")
     logIntoAnalyticsReadyAdminProfile()
@@ -688,8 +702,8 @@ class AudioPlayerControllerTest {
   }
 
   @Test
-  @EnableFeatureFlag(LOGGING_LEARNER_STUDY_IDS)
   fun testPause_playing_explicitAction_missingContentId_studyOn_logsPauseEventWithoutContentId() {
+    setUpMediaReadyApplicationWithLearnerStudy()
     val explorationId = TEST_EXPLORATION_ID_5
     arrangeMediaPlayer(contentId = null)
     logIntoAnalyticsReadyAdminProfile()
@@ -711,8 +725,8 @@ class AudioPlayerControllerTest {
   }
 
   @Test
-  @EnableFeatureFlag(LOGGING_LEARNER_STUDY_IDS)
   fun testPause_playing_explicitUserAction_outsideExp_studyOn_doesNotLogEvent() {
+    setUpMediaReadyApplicationWithLearnerStudy()
     arrangeMediaPlayer(contentId = "test_content_id")
     logIntoAnalyticsReadyAdminProfile()
     audioPlayerController.play(isPlayingFromAutoPlay = false, reloadingMainContent = false)
@@ -728,8 +742,8 @@ class AudioPlayerControllerTest {
   }
 
   @Test
-  @EnableFeatureFlag(LOGGING_LEARNER_STUDY_IDS)
   fun testPause_playing_notExplicitUserAction_studyOn_doesNotLogEvent() {
+    setUpMediaReadyApplicationWithLearnerStudy()
     val explorationId = TEST_EXPLORATION_ID_5
     arrangeMediaPlayer(contentId = "test_content_id", languageCode = "sw")
     logIntoAnalyticsReadyAdminProfile()
@@ -752,8 +766,8 @@ class AudioPlayerControllerTest {
   }
 
   @Test
-  @EnableFeatureFlag(LOGGING_LEARNER_STUDY_IDS)
   fun testPause_notPlaying_explicitUserAction_studyOn_doesNotLogEvent() {
+    setUpMediaReadyApplicationWithLearnerStudy()
     val explorationId = TEST_EXPLORATION_ID_5
     arrangeMediaPlayer(contentId = "test_content_id", languageCode = "sw")
     logIntoAnalyticsReadyAdminProfile()
@@ -774,8 +788,8 @@ class AudioPlayerControllerTest {
   }
 
   @Test
-  @EnableFeatureFlag(LOGGING_LEARNER_STUDY_IDS)
   fun testPause_notPlaying_notExplicitUserAction_studyOn_doesNotLogEvent() {
+    setUpMediaReadyApplicationWithLearnerStudy()
     val explorationId = TEST_EXPLORATION_ID_5
     arrangeMediaPlayer(contentId = "test_content_id", languageCode = "sw")
     logIntoAnalyticsReadyAdminProfile()
@@ -855,6 +869,11 @@ class AudioPlayerControllerTest {
     ).exploration
   }
 
+  private fun setUpMediaReadyApplicationWithLearnerStudy() {
+    TestModule.enableLearnerStudyAnalytics = true
+    setUpMediaReadyApplication()
+  }
+
   private fun setUpMediaReadyApplication() {
     setUpTestApplicationComponent()
     addMediaInfo()
@@ -877,10 +896,50 @@ class AudioPlayerControllerTest {
   // TODO(#89): Move this to a common test application component.
   @Module
   class TestModule {
+    companion object {
+      var enableLearnerStudyAnalytics: Boolean = false
+    }
+
     @Provides
     @Singleton
     fun provideContext(application: Application): Context {
       return application
+    }
+
+    // The scoping here is to ensure changes to the module value above don't change the parameter
+    // within the same application instance.
+    @Provides
+    @Singleton
+    @EnableLearnerStudyAnalytics
+    fun provideLearnerStudyAnalytics(): PlatformParameterValue<Boolean> {
+      // Snapshot the value so that it doesn't change between injection and use.
+      val enableFeature = enableLearnerStudyAnalytics
+      return PlatformParameterValue.createDefaultParameter(
+        defaultValue = enableFeature
+      )
+    }
+
+    @Provides
+    @Singleton
+    @EnableLoggingLearnerStudyIds
+    fun provideLoggingLearnerStudyIds(): PlatformParameterValue<Boolean> {
+      // Snapshot the value so that it doesn't change between injection and use.
+      val enableFeature = enableLearnerStudyAnalytics
+      return PlatformParameterValue.createDefaultParameter(
+        defaultValue = enableFeature
+      )
+    }
+
+    @Provides
+    @EnableNpsSurvey
+    fun provideEnableNpsSurvey(): PlatformParameterValue<Boolean> {
+      return PlatformParameterValue.createDefaultParameter(defaultValue = true)
+    }
+
+    @Provides
+    @EnableOnboardingFlowV2
+    fun provideEnableOnboardingFlowV2(): PlatformParameterValue<Boolean> {
+      return PlatformParameterValue.createDefaultParameter(defaultValue = true)
     }
   }
 
@@ -909,16 +968,12 @@ class AudioPlayerControllerTest {
       LoggingIdentifierModule::class,
       MathEquationInputModule::class,
       MultipleChoiceInputModule::class,
-      NetworkConfigTestModule::class,
       NetworkConnectionUtilDebugModule::class,
       NumberWithUnitsRuleModule::class,
       NumericExpressionInputModule::class,
       NumericInputRuleModule::class,
-      PlatformParameterTestModule::class,
-      QuestionModule::class,
+      PlatformParameterSingletonModule::class,
       RatioInputModule::class,
-      RetrofitModule::class,
-      RetrofitServiceModule::class,
       RobolectricModule::class,
       SyncStatusModule::class,
       TestAuthenticationModule::class,
@@ -928,9 +983,7 @@ class AudioPlayerControllerTest {
       TextInputRuleModule::class
     ]
   )
-  interface TestApplicationComponent :
-    DataProvidersInjector,
-    PlatformParameterInitializationInjector {
+  interface TestApplicationComponent : DataProvidersInjector {
     @Component.Builder
     interface Builder {
       @BindsInstance
@@ -941,10 +994,7 @@ class AudioPlayerControllerTest {
     fun inject(test: AudioPlayerControllerTest)
   }
 
-  class TestApplication :
-    Application(),
-    DataProvidersInjectorProvider,
-    PlatformParameterInitializationInjectorProvider {
+  class TestApplication : Application(), DataProvidersInjectorProvider {
     private val component: TestApplicationComponent by lazy {
       DaggerAudioPlayerControllerTest_TestApplicationComponent.builder()
         .setApplication(this)
@@ -956,7 +1006,5 @@ class AudioPlayerControllerTest {
     }
 
     override fun getDataProvidersInjector(): DataProvidersInjector = component
-
-    override fun getPlatformParameterInitializationInjector() = component
   }
 }

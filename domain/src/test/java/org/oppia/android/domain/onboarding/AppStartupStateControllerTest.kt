@@ -12,7 +12,6 @@ import dagger.Component
 import dagger.Module
 import dagger.Provides
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.oppia.android.app.model.AppStartupState.BuildFlavorNoticeMode.FLAVOR_NOTICE_MODE_UNSPECIFIED
@@ -28,28 +27,22 @@ import org.oppia.android.app.model.BuildFlavor
 import org.oppia.android.app.model.DeprecationNoticeType
 import org.oppia.android.app.model.DeprecationResponse
 import org.oppia.android.app.model.EventLog
-import org.oppia.android.app.model.FeatureFlagId.APP_AND_OS_DEPRECATION
 import org.oppia.android.app.model.OnboardingState
-import org.oppia.android.app.model.PlatformParameterId.FORCED_APP_UPDATE_VERSION_CODE
-import org.oppia.android.app.model.PlatformParameterId.LOWEST_SUPPORTED_API_LEVEL
-import org.oppia.android.app.model.PlatformParameterId.OPTIONAL_APP_UPDATE_VERSION_CODE
-import org.oppia.android.data.backends.gae.RetrofitModule
-import org.oppia.android.data.backends.gae.RetrofitServiceModule
-import org.oppia.android.data.backends.gae.testing.NetworkConfigTestModule
+import org.oppia.android.app.model.PlatformParameter
 import org.oppia.android.data.persistence.PersistentCacheStore
 import org.oppia.android.domain.onboarding.AppStartupStateControllerTest.TestModule.Companion.appDeprecationResponse
+import org.oppia.android.domain.onboarding.AppStartupStateControllerTest.TestModule.Companion.enableAppAndOsDeprecation
+import org.oppia.android.domain.onboarding.AppStartupStateControllerTest.TestModule.Companion.forcedAppUpdateVersion
+import org.oppia.android.domain.onboarding.AppStartupStateControllerTest.TestModule.Companion.lowestApiLevel
+import org.oppia.android.domain.onboarding.AppStartupStateControllerTest.TestModule.Companion.optionalAppUpdateVersion
 import org.oppia.android.domain.onboarding.AppStartupStateControllerTest.TestModule.Companion.osDeprecationResponse
 import org.oppia.android.domain.oppialogger.LogStorageModule
 import org.oppia.android.domain.oppialogger.LoggingIdentifierModule
 import org.oppia.android.domain.oppialogger.analytics.ApplicationLifecycleModule
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjector
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjectorProvider
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterTestInitializer
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterTestModule
-import org.oppia.android.testing.EnableFeatureFlag
+import org.oppia.android.domain.platformparameter.PlatformParameterController
+import org.oppia.android.domain.platformparameter.PlatformParameterModule
+import org.oppia.android.domain.platformparameter.PlatformParameterSingletonModule
 import org.oppia.android.testing.FakeAnalyticsEventLogger
-import org.oppia.android.testing.OppiaTestRule
-import org.oppia.android.testing.OverrideIntParameter
 import org.oppia.android.testing.TestLogReportingModule
 import org.oppia.android.testing.data.DataProviderTestMonitor
 import org.oppia.android.testing.junit.OppiaParameterizedTestRunner
@@ -70,6 +63,10 @@ import org.oppia.android.util.logging.GlobalLogLevel
 import org.oppia.android.util.logging.LogLevel
 import org.oppia.android.util.logging.SyncStatusModule
 import org.oppia.android.util.networking.NetworkConnectionUtilDebugModule
+import org.oppia.android.util.platformparameter.APP_AND_OS_DEPRECATION
+import org.oppia.android.util.platformparameter.FORCED_APP_UPDATE_VERSION_CODE
+import org.oppia.android.util.platformparameter.LOWEST_SUPPORTED_API_LEVEL
+import org.oppia.android.util.platformparameter.OPTIONAL_APP_UPDATE_VERSION_CODE
 import org.oppia.android.util.system.OppiaClockModule
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
@@ -88,10 +85,9 @@ import javax.inject.Singleton
 @SelectRunnerPlatform(ParameterizedRobolectricTestRunner::class)
 @Config(application = AppStartupStateControllerTest.TestApplication::class)
 class AppStartupStateControllerTest {
-  @get:Rule val oppiaTestRule = OppiaTestRule()
-
   @Inject lateinit var context: Context
   @Inject lateinit var appStartupStateController: AppStartupStateController
+  @Inject lateinit var platformParameterController: PlatformParameterController
   @Inject lateinit var testCoroutineDispatchers: TestCoroutineDispatchers
   @Inject lateinit var monitorFactory: DataProviderTestMonitor.Factory
   @Inject lateinit var fakeAnalyticsEventLogger: FakeAnalyticsEventLogger
@@ -796,9 +792,17 @@ class AppStartupStateControllerTest {
   }
 
   @Test
-  @EnableFeatureFlag(APP_AND_OS_DEPRECATION)
   fun testController_appAndOsDeprecationEnabled_initialLaunch_startupModeIsUserNotOnboarded() {
+    executeInPreviousAppInstance { testComponent ->
+      testComponent.getPlatformParameterController().updatePlatformParameterDatabase(
+        listOf(enableAppAndOsDeprecation)
+      )
+      testComponent.getTestCoroutineDispatchers().runCurrent()
+    }
     setUpDefaultTestApplicationComponent()
+
+    monitorFactory.ensureDataProviderExecutes(platformParameterController.getParameterDatabase())
+    testCoroutineDispatchers.runCurrent()
 
     val appStartupState = appStartupStateController.getAppStartupState()
 
@@ -807,9 +811,8 @@ class AppStartupStateControllerTest {
   }
 
   @Test
-  @EnableFeatureFlag(APP_AND_OS_DEPRECATION)
   fun testController_appAndOsDeprecationEnabled_userIsOnboarded_returnsUserOnboardedStartupMode() {
-    setUpTestApplicationWithOnboardingFlowCompleted()
+    setUpTestApplicationWithAppAndOSDeprecationEnabled()
 
     val appStartupState = appStartupStateController.getAppStartupState()
 
@@ -818,10 +821,10 @@ class AppStartupStateControllerTest {
   }
 
   @Test
-  @EnableFeatureFlag(APP_AND_OS_DEPRECATION)
-  @OverrideIntParameter(LOWEST_SUPPORTED_API_LEVEL, Int.MAX_VALUE)
   fun testController_osIsDeprecated_returnsOsDeprecatedStartupMode() {
-    setUpTestApplicationWithOnboardingFlowCompleted()
+    setUpTestApplicationWithAppAndOSDeprecationEnabled(
+      platformParameterToEnable = lowestApiLevel
+    )
 
     val appStartupState = appStartupStateController.getAppStartupState()
 
@@ -830,10 +833,11 @@ class AppStartupStateControllerTest {
   }
 
   @Test
-  @EnableFeatureFlag(APP_AND_OS_DEPRECATION)
-  @OverrideIntParameter(LOWEST_SUPPORTED_API_LEVEL, Int.MAX_VALUE)
   fun testController_osIsDeprecated_previousResponseExists_returnsUserOnboardedStartupMode() {
-    setUpTestApplicationOnboardedWithDeprecationResponse(osDeprecationResponse)
+    setUpTestApplicationWithAppAndOSDeprecationEnabled(
+      previousResponses = listOf(osDeprecationResponse),
+      platformParameterToEnable = lowestApiLevel
+    )
 
     val appStartupState = appStartupStateController.getAppStartupState()
 
@@ -842,10 +846,10 @@ class AppStartupStateControllerTest {
   }
 
   @Test
-  @EnableFeatureFlag(APP_AND_OS_DEPRECATION)
-  @OverrideIntParameter(OPTIONAL_APP_UPDATE_VERSION_CODE, Int.MAX_VALUE)
   fun testController_optionalUpdateAvailable_returnsOptionalUpdateStartupMode() {
-    setUpTestApplicationWithOnboardingFlowCompleted()
+    setUpTestApplicationWithAppAndOSDeprecationEnabled(
+      platformParameterToEnable = optionalAppUpdateVersion
+    )
 
     val appStartupState = appStartupStateController.getAppStartupState()
 
@@ -854,10 +858,12 @@ class AppStartupStateControllerTest {
   }
 
   @Test
-  @EnableFeatureFlag(APP_AND_OS_DEPRECATION)
-  @OverrideIntParameter(OPTIONAL_APP_UPDATE_VERSION_CODE, Int.MAX_VALUE)
-  fun testController_optionalUpdateAvailable_prevResponseExists_returnsUserOnboardedStartupMode() {
-    setUpTestApplicationOnboardedWithDeprecationResponse(appDeprecationResponse)
+  fun testController_optionalUpdateAvailable_previousResponseExists_returnsUserOnboardedStartupMode
+  () {
+    setUpTestApplicationWithAppAndOSDeprecationEnabled(
+      previousResponses = listOf(appDeprecationResponse),
+      platformParameterToEnable = optionalAppUpdateVersion
+    )
 
     val appStartupState = appStartupStateController.getAppStartupState()
 
@@ -866,10 +872,10 @@ class AppStartupStateControllerTest {
   }
 
   @Test
-  @EnableFeatureFlag(APP_AND_OS_DEPRECATION)
-  @OverrideIntParameter(FORCED_APP_UPDATE_VERSION_CODE, Int.MAX_VALUE)
   fun testController_forcedUpdateAvailable_returnsAppDeprecatedStartupMode() {
-    setUpTestApplicationWithOnboardingFlowCompleted()
+    setUpTestApplicationWithAppAndOSDeprecationEnabled(
+      platformParameterToEnable = forcedAppUpdateVersion
+    )
 
     val appStartupState = appStartupStateController.getAppStartupState()
 
@@ -878,10 +884,12 @@ class AppStartupStateControllerTest {
   }
 
   @Test
-  @EnableFeatureFlag(APP_AND_OS_DEPRECATION)
-  @OverrideIntParameter(FORCED_APP_UPDATE_VERSION_CODE, Int.MAX_VALUE)
-  fun testController_forcedUpdateAvailable_prevResponseExists_returnsUserOnboardedStartupMode() {
-    setUpTestApplicationOnboardedWithDeprecationResponse(appDeprecationResponse)
+  fun testController_forcedUpdateAvailable_previousResponseExists_returnsUserOnboardedStartupMode
+  () {
+    setUpTestApplicationWithAppAndOSDeprecationEnabled(
+      previousResponses = listOf(appDeprecationResponse),
+      platformParameterToEnable = forcedAppUpdateVersion
+    )
 
     val appStartupState = appStartupStateController.getAppStartupState()
 
@@ -900,21 +908,30 @@ class AppStartupStateControllerTest {
     setUpOppiaApplication(expirationEnabled = false, expDate = "9999-12-31")
   }
 
-  private fun setUpTestApplicationWithOnboardingFlowCompleted() {
+  private fun setUpTestApplicationWithAppAndOSDeprecationEnabled(
+    previousResponses: List<DeprecationResponse> = emptyList(),
+    platformParameterToEnable: PlatformParameter? = null
+  ) {
     executeInPreviousAppInstance { testComponent ->
       testComponent.getAppStartupStateController().markOnboardingFlowCompleted()
       testComponent.getTestCoroutineDispatchers().runCurrent()
-    }
-    setUpTestApplicationComponent()
-  }
 
-  private fun setUpTestApplicationOnboardedWithDeprecationResponse(response: DeprecationResponse) {
-    executeInPreviousAppInstance { testComponent ->
-      testComponent.getAppStartupStateController().markOnboardingFlowCompleted()
-      testComponent.getDeprecationController().saveDeprecationResponse(response)
+      previousResponses.forEach {
+        testComponent.getDeprecationController().saveDeprecationResponse(it)
+        testComponent.getTestCoroutineDispatchers().runCurrent()
+      }
+
+      testComponent.getPlatformParameterController().updatePlatformParameterDatabase(
+        platformParameterToEnable?.let { listOf(it, enableAppAndOsDeprecation) }
+          ?: listOf(enableAppAndOsDeprecation)
+      )
       testComponent.getTestCoroutineDispatchers().runCurrent()
     }
+
     setUpTestApplicationComponent()
+
+    monitorFactory.ensureDataProviderExecutes(platformParameterController.getParameterDatabase())
+    testCoroutineDispatchers.runCurrent()
   }
 
   /**
@@ -931,9 +948,11 @@ class AppStartupStateControllerTest {
     // can behave like a real Android application class (per Robolectric) without having a shared
     // Dagger dependency graph with the application under test.
     testApplication.attachBaseContext(ApplicationProvider.getApplicationContext())
-    // Ensure params & flags are initialized.
-    testApplication.component.getPlatformParameterTestInitializer()
-    block(testApplication.component)
+    block(
+      DaggerAppStartupStateControllerTest_TestApplicationComponent.builder()
+        .setApplication(testApplication)
+        .build()
+    )
   }
 
   /** Returns a date string occurring before today. */
@@ -990,6 +1009,30 @@ class AppStartupStateControllerTest {
     companion object {
       var buildFlavor = BuildFlavor.BUILD_FLAVOR_UNSPECIFIED
 
+      val lowestApiLevel: PlatformParameter = PlatformParameter.newBuilder()
+        .setName(LOWEST_SUPPORTED_API_LEVEL)
+        .setInteger(Int.MAX_VALUE)
+        .setSyncStatus(PlatformParameter.SyncStatus.SYNCED_FROM_SERVER)
+        .build()
+
+      val optionalAppUpdateVersion: PlatformParameter = PlatformParameter.newBuilder()
+        .setName(OPTIONAL_APP_UPDATE_VERSION_CODE)
+        .setInteger(Int.MAX_VALUE)
+        .setSyncStatus(PlatformParameter.SyncStatus.SYNCED_FROM_SERVER)
+        .build()
+
+      val forcedAppUpdateVersion: PlatformParameter = PlatformParameter.newBuilder()
+        .setName(FORCED_APP_UPDATE_VERSION_CODE)
+        .setInteger(Int.MAX_VALUE)
+        .setSyncStatus(PlatformParameter.SyncStatus.SYNCED_FROM_SERVER)
+        .build()
+
+      val enableAppAndOsDeprecation: PlatformParameter = PlatformParameter.newBuilder()
+        .setName(APP_AND_OS_DEPRECATION)
+        .setBoolean(true)
+        .setSyncStatus(PlatformParameter.SyncStatus.SYNCED_FROM_SERVER)
+        .build()
+
       val osDeprecationResponse: DeprecationResponse = DeprecationResponse.newBuilder()
         .setDeprecationNoticeType(DeprecationNoticeType.OS_DEPRECATION)
         .setDeprecatedVersion(Int.MAX_VALUE)
@@ -1031,16 +1074,14 @@ class AppStartupStateControllerTest {
     modules = [
       ApplicationLifecycleModule::class,
       AssetModule::class,
-      ExpirationMetaDataRetrieverModule::class,
+      ExpirationMetaDataRetrieverModule::class, // Use real implementation to test closer to prod.
       LocaleProdModule::class,
       LogStorageModule::class,
       LoggingIdentifierModule::class,
-      NetworkConfigTestModule::class,
       NetworkConnectionUtilDebugModule::class,
       OppiaClockModule::class,
-      PlatformParameterTestModule::class,
-      RetrofitModule::class,
-      RetrofitServiceModule::class,
+      PlatformParameterModule::class,
+      PlatformParameterSingletonModule::class,
       RobolectricModule::class,
       SyncStatusModule::class,
       TestDispatcherModule::class,
@@ -1048,9 +1089,7 @@ class AppStartupStateControllerTest {
       TestModule::class
     ]
   )
-  interface TestApplicationComponent :
-    DataProvidersInjector,
-    PlatformParameterInitializationInjector {
+  interface TestApplicationComponent : DataProvidersInjector {
     @Component.Builder
     interface Builder {
       @BindsInstance
@@ -1059,24 +1098,23 @@ class AppStartupStateControllerTest {
       fun build(): TestApplicationComponent
     }
 
-    fun getPlatformParameterTestInitializer(): PlatformParameterTestInitializer
-
     fun getAppStartupStateController(): AppStartupStateController
 
     fun getCacheFactory(): PersistentCacheStore.Factory
 
+    fun getTestCoroutineDispatchers(): TestCoroutineDispatchers
+
     fun getContext(): Context
+
+    fun getPlatformParameterController(): PlatformParameterController
 
     fun getDeprecationController(): DeprecationController
 
     fun inject(appStartupStateControllerTest: AppStartupStateControllerTest)
   }
 
-  class TestApplication :
-    Application(),
-    DataProvidersInjectorProvider,
-    PlatformParameterInitializationInjectorProvider {
-    val component: TestApplicationComponent by lazy {
+  class TestApplication : Application(), DataProvidersInjectorProvider {
+    private val component: TestApplicationComponent by lazy {
       DaggerAppStartupStateControllerTest_TestApplicationComponent.builder()
         .setApplication(this)
         .build()
@@ -1091,7 +1129,5 @@ class AppStartupStateControllerTest {
     }
 
     override fun getDataProvidersInjector(): DataProvidersInjector = component
-
-    override fun getPlatformParameterInitializationInjector() = component
   }
 }

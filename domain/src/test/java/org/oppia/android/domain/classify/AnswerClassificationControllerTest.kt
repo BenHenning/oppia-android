@@ -10,7 +10,6 @@ import dagger.Component
 import dagger.Module
 import dagger.Provides
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.oppia.android.app.model.AnswerGroup
@@ -48,8 +47,8 @@ import org.oppia.android.domain.classify.rules.textinput.TextInputRuleModule
 import org.oppia.android.domain.oppialogger.LogStorageModule
 import org.oppia.android.domain.oppialogger.LoggingIdentifierModule
 import org.oppia.android.domain.oppialogger.analytics.ApplicationLifecycleModule
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterTestModule
-import org.oppia.android.testing.OppiaTestRule
+import org.oppia.android.domain.platformparameter.PlatformParameterModule
+import org.oppia.android.domain.platformparameter.PlatformParameterSingletonModule
 import org.oppia.android.testing.TestLogReportingModule
 import org.oppia.android.testing.assertThrows
 import org.oppia.android.testing.robolectric.RobolectricModule
@@ -140,9 +139,6 @@ class AnswerClassificationControllerTest {
     private const val TEST_SKILL_ID_0 = "test-skill-id-0"
     private const val TEST_MISCONCEPTION_ID_0 = "test-misconception-id-0"
   }
-
-  @get:Rule
-  val oppiaTestRule = OppiaTestRule()
 
   @Inject
   lateinit var answerClassificationController: AnswerClassificationController
@@ -868,7 +864,8 @@ class AnswerClassificationControllerTest {
       NumberWithUnitsRuleModule::class,
       NumericExpressionInputModule::class,
       NumericInputRuleModule::class,
-      PlatformParameterTestModule::class,
+      PlatformParameterModule::class,
+      PlatformParameterSingletonModule::class,
       RatioInputModule::class,
       RobolectricModule::class,
       SyncStatusModule::class,

@@ -30,7 +30,6 @@ import org.mockito.Mockito.verifyNoMoreInteractions
 import org.mockito.junit.MockitoJUnit
 import org.mockito.junit.MockitoRule
 import org.oppia.android.testing.FakeExceptionLogger
-import org.oppia.android.testing.OppiaTestRule
 import org.oppia.android.testing.TestLogReportingModule
 import org.oppia.android.testing.data.AsyncResultSubject.Companion.assertThat
 import org.oppia.android.testing.data.DataProviderTestMonitor
@@ -74,9 +73,6 @@ private const val COMBINED_STR_VALUE_02 = "I used to be indecisive. At least I t
 @LooperMode(LooperMode.Mode.PAUSED)
 @Config(application = DataProvidersTest.TestApplication::class)
 class DataProvidersTest {
-  @get:Rule
-  val oppiaTestRule = OppiaTestRule()
-
   @field:[Rule JvmField] val mockitoRule: MockitoRule = MockitoJUnit.rule()
 
   @Inject lateinit var application: Application
@@ -3376,9 +3372,7 @@ class DataProvidersTest {
       TestModule::class
     ]
   )
-  interface TestApplicationComponent :
-    DataProvidersInjector,
-    PlatformParameterInitializationInjector {
+  interface TestApplicationComponent : DataProvidersInjector {
     @Component.Builder
     interface Builder {
       @BindsInstance
@@ -3389,10 +3383,7 @@ class DataProvidersTest {
     fun inject(dataProvidersTest: DataProvidersTest)
   }
 
-  class TestApplication :
-    Application(),
-    DataProvidersInjectorProvider,
-    PlatformParameterInitializationInjectorProvider {
+  class TestApplication : Application(), DataProvidersInjectorProvider {
     private val component: TestApplicationComponent by lazy {
       DaggerDataProvidersTest_TestApplicationComponent.builder()
         .setApplication(this)
@@ -3404,7 +3395,5 @@ class DataProvidersTest {
     }
 
     override fun getDataProvidersInjector(): DataProvidersInjector = component
-
-    override fun getPlatformParameterInitializationInjector() = component
   }
 }

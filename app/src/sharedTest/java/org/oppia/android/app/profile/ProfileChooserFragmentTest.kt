@@ -51,8 +51,6 @@ import org.oppia.android.app.classroom.ClassroomListActivity
 import org.oppia.android.app.devoptions.DeveloperOptionsModule
 import org.oppia.android.app.devoptions.DeveloperOptionsStarterModule
 import org.oppia.android.app.home.HomeActivity
-import org.oppia.android.app.model.FeatureFlagId.MULTIPLE_CLASSROOMS
-import org.oppia.android.app.model.FeatureFlagId.ONBOARDING_FLOW_V2
 import org.oppia.android.app.model.OppiaLanguage
 import org.oppia.android.app.model.ProfileId
 import org.oppia.android.app.model.ProfileType
@@ -95,19 +93,16 @@ import org.oppia.android.domain.oppialogger.analytics.ApplicationLifecycleModule
 import org.oppia.android.domain.oppialogger.analytics.CpuPerformanceSnapshotterModule
 import org.oppia.android.domain.oppialogger.logscheduler.MetricLogSchedulerModule
 import org.oppia.android.domain.oppialogger.loguploader.LogReportWorkerModule
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjector
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjectorProvider
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterTestModule
+import org.oppia.android.domain.platformparameter.PlatformParameterSingletonModule
 import org.oppia.android.domain.profile.ProfileManagementController
 import org.oppia.android.domain.question.QuestionModule
 import org.oppia.android.domain.workmanager.WorkManagerConfigurationModule
-import org.oppia.android.testing.DisableFeatureFlag
-import org.oppia.android.testing.EnableFeatureFlag
 import org.oppia.android.testing.OppiaTestRule
 import org.oppia.android.testing.TestLogReportingModule
 import org.oppia.android.testing.firebase.TestAuthenticationModule
 import org.oppia.android.testing.junit.DefineAppLanguageLocaleContext
 import org.oppia.android.testing.junit.InitializeDefaultLocaleRule
+import org.oppia.android.testing.platformparameter.TestPlatformParameterModule
 import org.oppia.android.testing.profile.ProfileTestHelper
 import org.oppia.android.testing.robolectric.RobolectricModule
 import org.oppia.android.testing.threading.TestCoroutineDispatchers
@@ -149,23 +144,32 @@ class ProfileChooserFragmentTest {
   @Inject lateinit var profileManagementController: ProfileManagementController
   @Inject lateinit var context: Context
   @Inject lateinit var testCoroutineDispatchers: TestCoroutineDispatchers
-  @Inject lateinit var appLanguageLocaleHandler: AppLanguageLocaleHandler
+
+  @Inject
+  lateinit var appLanguageLocaleHandler: AppLanguageLocaleHandler
 
   private val testProfileId = ProfileId.newBuilder().setInternalId(0).build()
 
   @Before
   fun setUp() {
     Intents.init()
+    setUpTestApplicationComponent()
+    testCoroutineDispatchers.registerIdlingResource()
   }
 
   @After
   fun tearDown() {
+    TestPlatformParameterModule.reset()
+    testCoroutineDispatchers.unregisterIdlingResource()
     Intents.release()
+  }
+
+  private fun setUpTestApplicationComponent() {
+    ApplicationProvider.getApplicationContext<TestApplication>().inject(this)
   }
 
   @Test
   fun testProfileChooserActivity_hasCorrectLabel() {
-    setUpTestApplicationComponent()
     launch(ProfileChooserActivity::class.java).use { scenario ->
       scenario.onActivity { activity ->
         val title = activity.title
@@ -178,9 +182,8 @@ class ProfileChooserFragmentTest {
   }
 
   @Test
-  @DisableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testProfileChooserFragment_initializeProfiles_checkProfilesAreShown() {
-    setUpTestApplicationComponent()
+    TestPlatformParameterModule.forceEnableOnboardingFlowV2(false)
     profileTestHelper.initializeProfiles(autoLogIn = false)
     launch(ProfileChooserActivity::class.java).use {
       testCoroutineDispatchers.runCurrent()
@@ -222,9 +225,8 @@ class ProfileChooserFragmentTest {
   }
 
   @Test
-  @DisableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testProfileChooserFragment_afterVisitingHomeActivity_showsJustNowText() {
-    setUpTestApplicationComponent()
+    TestPlatformParameterModule.forceEnableOnboardingFlowV2(false)
     // Note that the auto-log in here is simulating HomeActivity having been visited before (i.e.
     // that a profile was previously logged in).
     profileTestHelper.initializeProfiles(autoLogIn = true)
@@ -247,9 +249,8 @@ class ProfileChooserFragmentTest {
   }
 
   @Test
-  @DisableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testProfileChooserFragment_afterVisitingHomeActivity_changeConfiguration_showsJustNowText() {
-    setUpTestApplicationComponent()
+    TestPlatformParameterModule.forceEnableOnboardingFlowV2(false)
     // Note that the auto-log in here is simulating HomeActivity having been visited before (i.e.
     // that a profile was previously logged in).
     profileTestHelper.initializeProfiles(autoLogIn = true)
@@ -273,9 +274,8 @@ class ProfileChooserFragmentTest {
   }
 
   @Test
-  @DisableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testProfileChooserFragment_addManyProfiles_checkProfilesSortedAndNoAddProfile() {
-    setUpTestApplicationComponent()
+    TestPlatformParameterModule.forceEnableOnboardingFlowV2(false)
     profileTestHelper.initializeProfiles(autoLogIn = false)
     profileTestHelper.addMoreProfiles(8)
     launch(ProfileChooserActivity::class.java).use {
@@ -354,9 +354,8 @@ class ProfileChooserFragmentTest {
   }
 
   @Test
-  @DisableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testProfileChooserFragment_onboardingV1_clickAdminProfile_checkOpensPinPasswordActivity() {
-    setUpTestApplicationComponent()
+    TestPlatformParameterModule.forceEnableOnboardingFlowV2(false)
     profileTestHelper.initializeProfiles(autoLogIn = false)
     launch(ProfileChooserActivity::class.java).use {
       testCoroutineDispatchers.runCurrent()
@@ -371,9 +370,8 @@ class ProfileChooserFragmentTest {
   }
 
   @Test
-  @EnableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testMigrateProfiles_onboardingV2_clickAdminProfile_checkOpensPinPasswordActivity() {
-    setUpTestApplicationComponent()
+    TestPlatformParameterModule.forceEnableOnboardingFlowV2(true)
     profileTestHelper.initializeProfiles(autoLogIn = true)
     profileTestHelper.updateProfileType(testProfileId, ProfileType.SUPERVISOR)
 
@@ -390,10 +388,9 @@ class ProfileChooserFragmentTest {
   }
 
   @Test
-  @EnableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testMigrateProfiles_onboardingV2_clickLearnerWithPin_checkOpensIntroActivity() {
-    setUpTestApplicationComponent()
     profileTestHelper.initializeProfiles(autoLogIn = true)
+    TestPlatformParameterModule.forceEnableOnboardingFlowV2(true)
 
     launch(ProfileChooserActivity::class.java).use {
       testCoroutineDispatchers.runCurrent()
@@ -408,10 +405,9 @@ class ProfileChooserFragmentTest {
   }
 
   @Test
-  @EnableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testMigrateProfiles_onboardingV2_clickAdminWithoutPin_checkOpensIntroActivity() {
-    setUpTestApplicationComponent()
     profileTestHelper.addOnlyAdminProfileWithoutPin()
+    TestPlatformParameterModule.forceEnableOnboardingFlowV2(true)
 
     launch(ProfileChooserActivity::class.java).use {
       testCoroutineDispatchers.runCurrent()
@@ -426,9 +422,7 @@ class ProfileChooserFragmentTest {
   }
 
   @Test
-  @EnableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testMigrateProfiles_onboardingV2_clickLearnerWithoutPin_checkOpensIntroActivity() {
-    setUpTestApplicationComponent()
     profileTestHelper.addOnlyAdminProfile()
     profileManagementController.addProfile(
       name = "Learner",
@@ -438,6 +432,7 @@ class ProfileChooserFragmentTest {
       colorRgb = -10710042,
       isAdmin = false
     )
+    TestPlatformParameterModule.forceEnableOnboardingFlowV2(true)
 
     launch(ProfileChooserActivity::class.java).use {
       testCoroutineDispatchers.runCurrent()
@@ -452,9 +447,8 @@ class ProfileChooserFragmentTest {
   }
 
   @Test
-  @EnableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testMigrateProfiles_onboardingV2_clickLearnerWithoutPin_checkIntroActivityHasNoStepCount() {
-    setUpTestApplicationComponent()
+    TestPlatformParameterModule.forceEnableOnboardingFlowV2(true)
     profileTestHelper.addOnlyAdminProfile()
     profileManagementController.addProfile(
       name = "Learner",
@@ -481,9 +475,8 @@ class ProfileChooserFragmentTest {
   }
 
   @Test
-  @DisableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testProfileChooserFragment_clickAdminProfileWithNoPin_checkOpensAdminPinActivity() {
-    setUpTestApplicationComponent()
+    TestPlatformParameterModule.forceEnableOnboardingFlowV2(false)
     profileTestHelper.addOnlyAdminProfileWithoutPin()
     launch<ProfileChooserActivity>(createProfileChooserActivityIntent()).use {
       testCoroutineDispatchers.runCurrent()
@@ -500,9 +493,8 @@ class ProfileChooserFragmentTest {
   }
 
   @Test
-  @DisableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testProfileChooserFragment_clickAdminControlsWithNoPin_checkOpensAdminControlsActivity() {
-    setUpTestApplicationComponent()
+    TestPlatformParameterModule.forceEnableOnboardingFlowV2(false)
     profileTestHelper.addOnlyAdminProfileWithoutPin()
     launch<ProfileChooserActivity>(createProfileChooserActivityIntent()).use {
       testCoroutineDispatchers.runCurrent()
@@ -517,9 +509,8 @@ class ProfileChooserFragmentTest {
   }
 
   @Test
-  @DisableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testProfileChooserFragment_checkLayoutManager_isLinearLayoutManager() {
-    setUpTestApplicationComponent()
+    TestPlatformParameterModule.forceEnableOnboardingFlowV2(false)
     profileTestHelper.addOnlyAdminProfile()
     launch<ProfileChooserActivity>(createProfileChooserActivityIntent()).use {
       testCoroutineDispatchers.runCurrent()
@@ -535,9 +526,8 @@ class ProfileChooserFragmentTest {
   }
 
   @Test
-  @DisableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testProfileChooserFragment_onlyAdminProfile_checkText_setUpMultipleProfilesIsVisible() {
-    setUpTestApplicationComponent()
+    TestPlatformParameterModule.forceEnableOnboardingFlowV2(false)
     profileTestHelper.addOnlyAdminProfile()
     launch<ProfileChooserActivity>(createProfileChooserActivityIntent()).use {
       testCoroutineDispatchers.runCurrent()
@@ -551,9 +541,8 @@ class ProfileChooserFragmentTest {
   }
 
   @Test
-  @DisableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testProfileChooserFragment_onlyAdminProfile_checkDescriptionText_isDisplayed() {
-    setUpTestApplicationComponent()
+    TestPlatformParameterModule.forceEnableOnboardingFlowV2(false)
     profileTestHelper.addOnlyAdminProfile()
     launch<ProfileChooserActivity>(createProfileChooserActivityIntent()).use {
       testCoroutineDispatchers.runCurrent()
@@ -568,9 +557,8 @@ class ProfileChooserFragmentTest {
   }
 
   @Test
-  @DisableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testProfileChooserFragment_multipleProfiles_checkText_addProfileIsVisible() {
-    setUpTestApplicationComponent()
+    TestPlatformParameterModule.forceEnableOnboardingFlowV2(false)
     profileTestHelper.initializeProfiles(autoLogIn = false)
     launch<ProfileChooserActivity>(createProfileChooserActivityIntent()).use {
       testCoroutineDispatchers.runCurrent()
@@ -584,9 +572,8 @@ class ProfileChooserFragmentTest {
   }
 
   @Test
-  @DisableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testProfileChooserFragment_multipleProfiles_checkDescriptionText_isDisplayed() {
-    setUpTestApplicationComponent()
+    TestPlatformParameterModule.forceEnableOnboardingFlowV2(false)
     profileTestHelper.initializeProfiles(autoLogIn = false)
     launch<ProfileChooserActivity>(createProfileChooserActivityIntent()).use {
       testCoroutineDispatchers.runCurrent()
@@ -601,9 +588,8 @@ class ProfileChooserFragmentTest {
   }
 
   @Test
-  @DisableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testProfileChooserFragment_clickAdminControls_opensAdminAuthActivity() {
-    setUpTestApplicationComponent()
+    TestPlatformParameterModule.forceEnableOnboardingFlowV2(false)
     profileTestHelper.initializeProfiles(autoLogIn = false)
     launch<ProfileChooserActivity>(createProfileChooserActivityIntent()).use {
       testCoroutineDispatchers.runCurrent()
@@ -614,9 +600,8 @@ class ProfileChooserFragmentTest {
   }
 
   @Test
-  @DisableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testProfileChooserFragment_clickAddProfile_opensAdminAuthActivity() {
-    setUpTestApplicationComponent()
+    TestPlatformParameterModule.forceEnableOnboardingFlowV2(false)
     profileTestHelper.initializeProfiles(autoLogIn = false)
     launch<ProfileChooserActivity>(createProfileChooserActivityIntent()).use {
       testCoroutineDispatchers.runCurrent()
@@ -632,10 +617,9 @@ class ProfileChooserFragmentTest {
   }
 
   @Test
-  @DisableFeatureFlag(MULTIPLE_CLASSROOMS)
-  @DisableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testProfileChooserFragment_clickProfile_opensHomeActivity() {
-    setUpTestApplicationComponent()
+    TestPlatformParameterModule.forceEnableMultipleClassrooms(false)
+    TestPlatformParameterModule.forceEnableOnboardingFlowV2(false)
     profileTestHelper.addOnlyAdminProfileWithoutPin()
     launch<ProfileChooserActivity>(createProfileChooserActivityIntent()).use {
       testCoroutineDispatchers.runCurrent()
@@ -654,10 +638,9 @@ class ProfileChooserFragmentTest {
   }
 
   @Test
-  @DisableFeatureFlag(ONBOARDING_FLOW_V2)
-  @EnableFeatureFlag(MULTIPLE_CLASSROOMS)
   fun testProfileChooserFragment_enableClassrooms_clickProfile_opensClassroomListActivity() {
-    setUpTestApplicationComponent()
+    TestPlatformParameterModule.forceEnableOnboardingFlowV2(false)
+    TestPlatformParameterModule.forceEnableMultipleClassrooms(true)
     profileTestHelper.addOnlyAdminProfileWithoutPin()
     launch<ProfileChooserActivity>(createProfileChooserActivityIntent()).use {
       testCoroutineDispatchers.runCurrent()
@@ -676,9 +659,8 @@ class ProfileChooserFragmentTest {
   }
 
   @Test
-  @EnableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testFragment_enableOnboardingV2_checkAddProfileTextIsDisplayed() {
-    setUpTestApplicationComponent()
+    TestPlatformParameterModule.forceEnableOnboardingFlowV2(true)
     profileTestHelper.initializeProfiles()
     launch(ProfileChooserActivity::class.java).use {
       testCoroutineDispatchers.runCurrent()
@@ -687,9 +669,8 @@ class ProfileChooserFragmentTest {
   }
 
   @Test
-  @EnableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testFragment_enableOnboardingV2_configChange_checkAddProfileTextIsDisplayed() {
-    setUpTestApplicationComponent()
+    TestPlatformParameterModule.forceEnableOnboardingFlowV2(true)
     profileTestHelper.initializeProfiles()
     launch(ProfileChooserActivity::class.java).use {
       testCoroutineDispatchers.runCurrent()
@@ -701,9 +682,8 @@ class ProfileChooserFragmentTest {
 
   @Test
   @Config(qualifiers = "land")
-  @EnableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testFragment_enableOnboardingV2_landscapeMode_checkScrollArrowsAreDisplayed() {
-    setUpTestApplicationComponent()
+    TestPlatformParameterModule.forceEnableOnboardingFlowV2(true)
     profileTestHelper.addOnlyAdminProfile()
     profileTestHelper.addMoreProfiles(8)
     launch(ProfileChooserActivity::class.java).use {
@@ -715,9 +695,8 @@ class ProfileChooserFragmentTest {
 
   @Test
   @Config(qualifiers = "land")
-  @EnableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testFragment_enableOnboardingV2_landscape_shortList_checkScrollArrowsAreNotDisplayed() {
-    setUpTestApplicationComponent()
+    TestPlatformParameterModule.forceEnableOnboardingFlowV2(true)
     profileTestHelper.addOnlyAdminProfile()
     launch(ProfileChooserActivity::class.java).use {
       testCoroutineDispatchers.runCurrent()
@@ -732,9 +711,8 @@ class ProfileChooserFragmentTest {
 
   @Test
   @Config(qualifiers = "land")
-  @EnableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testFragment_enableOnboardingV2_ltr_checkListIsSortedAlphabetically() {
-    setUpTestApplicationComponent()
+    TestPlatformParameterModule.forceEnableOnboardingFlowV2(true)
     profileTestHelper.addOnlyAdminProfile()
     profileTestHelper.addMoreProfiles(9)
     launch(ProfileChooserActivity::class.java).use {
@@ -817,9 +795,8 @@ class ProfileChooserFragmentTest {
 
   @Test
   @Config(qualifiers = "land")
-  @EnableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testFragment_enableOnboardingV2_ltr_checkRightArrowScrollsListToTheRight() {
-    setUpTestApplicationComponent()
+    TestPlatformParameterModule.forceEnableOnboardingFlowV2(true)
     profileTestHelper.addOnlyAdminProfile()
     profileTestHelper.addMoreProfiles(9)
     launch(ProfileChooserActivity::class.java).use {
@@ -856,9 +833,8 @@ class ProfileChooserFragmentTest {
 
   @Test
   @Config(qualifiers = "land")
-  @EnableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testFragment_enableOnboardingV2_ltr_checkLeftArrowScrollsListToTheLeft() {
-    setUpTestApplicationComponent()
+    TestPlatformParameterModule.forceEnableOnboardingFlowV2(true)
     profileTestHelper.addOnlyAdminProfile()
     profileTestHelper.addMoreProfiles(9)
     launch(ProfileChooserActivity::class.java).use {
@@ -916,9 +892,8 @@ class ProfileChooserFragmentTest {
     appStringIetfTag = "ar",
     appStringAndroidLanguageId = "ar"
   )
-  @EnableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testFragment_enableOnboardingV2_rtl_checkListIsSortedAlphabetically() {
-    setUpTestApplicationComponent()
+    TestPlatformParameterModule.forceEnableOnboardingFlowV2(true)
     forceDefaultLocale(EGYPT_ARABIC_LOCALE)
     profileTestHelper.addOnlyAdminProfile()
     profileTestHelper.addMoreProfiles(9)
@@ -1014,9 +989,8 @@ class ProfileChooserFragmentTest {
     appStringIetfTag = "ar",
     appStringAndroidLanguageId = "ar"
   )
-  @EnableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testFragment_enableOnboardingV2_rtl_checkLeftArrowScrollsListToTheRight() {
-    setUpTestApplicationComponent()
+    TestPlatformParameterModule.forceEnableOnboardingFlowV2(true)
     forceDefaultLocale(EGYPT_ARABIC_LOCALE)
     profileTestHelper.addOnlyAdminProfile()
     profileTestHelper.addMoreProfiles(9)
@@ -1075,9 +1049,8 @@ class ProfileChooserFragmentTest {
     appStringIetfTag = "ar",
     appStringAndroidLanguageId = "ar"
   )
-  @EnableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testFragment_enableOnboardingV2_rtl_checkRightArrowScrollsListToTheLeft() {
-    setUpTestApplicationComponent()
+    TestPlatformParameterModule.forceEnableOnboardingFlowV2(true)
     forceDefaultLocale(EGYPT_ARABIC_LOCALE)
     profileTestHelper.addOnlyAdminProfile()
     profileTestHelper.addMoreProfiles(9)
@@ -1136,9 +1109,8 @@ class ProfileChooserFragmentTest {
   }
 
   @Test
-  @EnableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testProfileChooserFragment_enableOnboardingV2_clickAddProfileButton_opensAdminAuthActivity() {
-    setUpTestApplicationComponent()
+    TestPlatformParameterModule.forceEnableOnboardingFlowV2(true)
     profileTestHelper.addOnlyAdminProfile()
     launch<ProfileChooserActivity>(createProfileChooserActivityIntent()).use {
       testCoroutineDispatchers.runCurrent()
@@ -1148,9 +1120,8 @@ class ProfileChooserFragmentTest {
   }
 
   @Test
-  @EnableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testProfileChooserFragment_enableOnboardingV2_clickAddProfilePrompt_opensAdminAuthActivity() {
-    setUpTestApplicationComponent()
+    TestPlatformParameterModule.forceEnableOnboardingFlowV2(true)
     profileTestHelper.addOnlyAdminProfile()
     launch<ProfileChooserActivity>(createProfileChooserActivityIntent()).use {
       testCoroutineDispatchers.runCurrent()
@@ -1160,9 +1131,8 @@ class ProfileChooserFragmentTest {
   }
 
   @Test
-  @EnableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testProfileChooserFragment_enableOnboardingV2_initializeProfiles_checkProfilesAreShown() {
-    setUpTestApplicationComponent()
+    TestPlatformParameterModule.forceEnableOnboardingFlowV2(true)
     profileTestHelper.initializeProfiles(autoLogIn = false)
     launch(ProfileChooserActivity::class.java).use {
       testCoroutineDispatchers.runCurrent()
@@ -1187,9 +1157,8 @@ class ProfileChooserFragmentTest {
   }
 
   @Test
-  @EnableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testProfileChooserFragment_enableOnboardingV2_afterVisitingHomeActivity_showsJustNowText() {
-    setUpTestApplicationComponent()
+    TestPlatformParameterModule.forceEnableOnboardingFlowV2(true)
     // Note that the auto-log in here is simulating HomeActivity having been visited before (i.e.
     // that a profile was previously logged in).
     profileTestHelper.initializeProfiles(autoLogIn = true)
@@ -1212,9 +1181,8 @@ class ProfileChooserFragmentTest {
 
   @Test
   @Config(qualifiers = "land")
-  @EnableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testFragment_enableOnboardingV2_landscapeMode_afterVisitingHome_showsJustNowText() {
-    setUpTestApplicationComponent()
+    TestPlatformParameterModule.forceEnableOnboardingFlowV2(true)
     // Note that the auto-log in here is simulating HomeActivity having been visited before (i.e.
     // that a profile was previously logged in).
     profileTestHelper.addOnlyAdminProfile()
@@ -1238,9 +1206,8 @@ class ProfileChooserFragmentTest {
   }
 
   @Test
-  @EnableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testFragment_enableOnboardingV2_addManyProfiles_checkNoAddProfile() {
-    setUpTestApplicationComponent()
+    TestPlatformParameterModule.forceEnableOnboardingFlowV2(true)
     profileTestHelper.addOnlyAdminProfile()
     profileTestHelper.addMoreProfiles(9)
     launch(ProfileChooserActivity::class.java).use {
@@ -1311,9 +1278,8 @@ class ProfileChooserFragmentTest {
   }
 
   @Test
-  @EnableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testFragment_enableOnboardingV2_addManyProfiles_checkProfilesSortedAlphabetically() {
-    setUpTestApplicationComponent()
+    TestPlatformParameterModule.forceEnableOnboardingFlowV2(true)
     profileTestHelper.initializeProfiles(autoLogIn = false)
     profileTestHelper.addMoreProfiles(8)
     launch(ProfileChooserActivity::class.java).use {
@@ -1382,9 +1348,8 @@ class ProfileChooserFragmentTest {
   }
 
   @Test
-  @EnableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testFragment_enableOnboardingV2_clickProfileWithPin_checkOpensPinPasswordActivity() {
-    setUpTestApplicationComponent()
+    TestPlatformParameterModule.forceEnableOnboardingFlowV2(true)
     profileTestHelper.addOnlyAdminProfile()
     profileTestHelper.updateProfileType(testProfileId, ProfileType.SUPERVISOR)
     launch(ProfileChooserActivity::class.java).use {
@@ -1397,10 +1362,6 @@ class ProfileChooserFragmentTest {
       ).perform(click())
       intended(hasComponent(PinPasswordActivity::class.java.name))
     }
-  }
-
-  private fun setUpTestApplicationComponent() {
-    ApplicationProvider.getApplicationContext<TestApplication>().inject(this)
   }
 
   private fun forceDefaultLocale(locale: Locale) {
@@ -1505,7 +1466,7 @@ class ProfileChooserFragmentTest {
       NumberWithUnitsRuleModule::class,
       NumericExpressionInputModule::class,
       NumericInputRuleModule::class,
-      PlatformParameterTestModule::class,
+      PlatformParameterSingletonModule::class,
       QuestionModule::class,
       RatioInputModule::class,
       RetrofitModule::class,
@@ -1516,15 +1477,14 @@ class ProfileChooserFragmentTest {
       TestAuthenticationModule::class,
       TestDispatcherModule::class,
       TestLogReportingModule::class,
+      TestPlatformParameterModule::class,
       TestingBuildFlavorModule::class,
       TextInputRuleModule::class,
       ViewBindingShimModule::class,
       WorkManagerConfigurationModule::class
     ]
   )
-  interface TestApplicationComponent :
-    ApplicationComponent,
-    PlatformParameterInitializationInjector {
+  interface TestApplicationComponent : ApplicationComponent {
     @Component.Builder
     interface Builder : ApplicationComponent.Builder {
       override fun build(): TestApplicationComponent
@@ -1533,11 +1493,7 @@ class ProfileChooserFragmentTest {
     fun inject(profileChooserFragmentTest: ProfileChooserFragmentTest)
   }
 
-  class TestApplication :
-    Application(),
-    ActivityComponentFactory,
-    ApplicationInjectorProvider,
-    PlatformParameterInitializationInjectorProvider {
+  class TestApplication : Application(), ActivityComponentFactory, ApplicationInjectorProvider {
     private val component: TestApplicationComponent by lazy {
       DaggerProfileChooserFragmentTest_TestApplicationComponent.builder()
         .setApplication(this)
@@ -1553,8 +1509,6 @@ class ProfileChooserFragmentTest {
     }
 
     override fun getApplicationInjector(): ApplicationInjector = component
-
-    override fun getPlatformParameterInitializationInjector() = component
   }
 
   private companion object {

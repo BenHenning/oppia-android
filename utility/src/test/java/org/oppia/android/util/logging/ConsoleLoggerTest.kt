@@ -15,12 +15,8 @@ import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
 import org.junit.After
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjector
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjectorProvider
-import org.oppia.android.testing.OppiaTestRule
 import org.oppia.android.testing.TestLogReportingModule
 import org.oppia.android.testing.junit.OppiaParameterizedTestRunner
 import org.oppia.android.testing.junit.OppiaParameterizedTestRunner.SelectRunnerPlatform
@@ -54,9 +50,6 @@ class ConsoleLoggerTest {
     private val testLogLevel: LogLevel = LogLevel.ERROR
     private const val testMessage = "test error message"
   }
-
-  @get:Rule
-  val oppiaTestRule = OppiaTestRule()
 
   @Inject lateinit var context: Context
   @Inject lateinit var consoleLogger: ConsoleLogger
@@ -166,9 +159,7 @@ class ConsoleLoggerTest {
       TestModule::class
     ]
   )
-  interface TestApplicationComponent :
-    DataProvidersInjector,
-    PlatformParameterInitializationInjector {
+  interface TestApplicationComponent : DataProvidersInjector {
     @Component.Builder
     interface Builder {
       @BindsInstance
@@ -180,10 +171,7 @@ class ConsoleLoggerTest {
     fun inject(test: ConsoleLoggerTest)
   }
 
-  class TestApplication :
-    Application(),
-    DataProvidersInjectorProvider,
-    PlatformParameterInitializationInjectorProvider {
+  class TestApplication : Application(), DataProvidersInjectorProvider {
     private val component: TestApplicationComponent by lazy {
       DaggerConsoleLoggerTest_TestApplicationComponent.builder()
         .setApplication(this)
@@ -199,7 +187,5 @@ class ConsoleLoggerTest {
     }
 
     override fun getDataProvidersInjector(): DataProvidersInjector = component
-
-    override fun getPlatformParameterInitializationInjector() = component
   }
 }

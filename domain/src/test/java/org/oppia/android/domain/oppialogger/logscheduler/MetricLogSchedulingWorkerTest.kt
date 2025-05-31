@@ -20,16 +20,11 @@ import dagger.Component
 import dagger.Module
 import dagger.Provides
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.oppia.android.app.model.FeatureFlagId.PERFORMANCE_METRICS_COLLECTION
 import org.oppia.android.app.model.OppiaMetricLog.LoggableMetric.LoggableMetricTypeCase.MEMORY_USAGE_METRIC
 import org.oppia.android.app.model.OppiaMetricLog.LoggableMetric.LoggableMetricTypeCase.NETWORK_USAGE_METRIC
 import org.oppia.android.app.model.OppiaMetricLog.LoggableMetric.LoggableMetricTypeCase.STORAGE_USAGE_METRIC
-import org.oppia.android.data.backends.gae.RetrofitModule
-import org.oppia.android.data.backends.gae.RetrofitServiceModule
-import org.oppia.android.data.backends.gae.testing.NetworkConfigTestModule
 import org.oppia.android.domain.oppialogger.EventLogStorageCacheSize
 import org.oppia.android.domain.oppialogger.ExceptionLogStorageCacheSize
 import org.oppia.android.domain.oppialogger.LoggingIdentifierModule
@@ -40,16 +35,13 @@ import org.oppia.android.domain.oppialogger.analytics.CpuPerformanceSnapshotterM
 import org.oppia.android.domain.oppialogger.analytics.PerformanceMetricsController
 import org.oppia.android.domain.oppialogger.loguploader.LogReportWorkerModule
 import org.oppia.android.domain.oppialogger.loguploader.LogUploadWorker
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjector
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjectorProvider
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterTestModule
+import org.oppia.android.domain.platformparameter.PlatformParameterSingletonModule
 import org.oppia.android.domain.testing.oppialogger.loguploader.FakeLogUploader
-import org.oppia.android.testing.EnableFeatureFlag
 import org.oppia.android.testing.FakeAnalyticsEventLogger
 import org.oppia.android.testing.FakeExceptionLogger
 import org.oppia.android.testing.FakePerformanceMetricsEventLogger
-import org.oppia.android.testing.OppiaTestRule
 import org.oppia.android.testing.logging.SyncStatusTestModule
+import org.oppia.android.testing.platformparameter.TestPlatformParameterModule
 import org.oppia.android.testing.robolectric.RobolectricModule
 import org.oppia.android.testing.threading.TestCoroutineDispatchers
 import org.oppia.android.testing.threading.TestDispatcherModule
@@ -81,10 +73,7 @@ private const val INCORRECT_WORKER_CASE = "incorrect_worker_case"
 @RunWith(AndroidJUnit4::class)
 @LooperMode(LooperMode.Mode.PAUSED)
 @Config(application = MetricLogSchedulingWorkerTest.TestApplication::class)
-@EnableFeatureFlag(PERFORMANCE_METRICS_COLLECTION)
 class MetricLogSchedulingWorkerTest {
-  @get:Rule val oppiaTestRule = OppiaTestRule()
-
   @Inject
   lateinit var networkConnectionUtil: NetworkConnectionDebugUtil
 
@@ -110,6 +99,7 @@ class MetricLogSchedulingWorkerTest {
 
   @Before
   fun setUp() {
+    TestPlatformParameterModule.forceEnablePerformanceMetricsCollection(true)
     setUpTestApplicationComponent()
     context = InstrumentationRegistry.getInstrumentation().targetContext
     val config = Configuration.Builder()
@@ -222,7 +212,10 @@ class MetricLogSchedulingWorkerTest {
   }
 
   private fun setUpTestApplicationComponent() {
-    ApplicationProvider.getApplicationContext<TestApplication>().inject(this)
+    DaggerMetricLogSchedulingWorkerTest_TestApplicationComponent.builder()
+      .setApplication(ApplicationProvider.getApplicationContext())
+      .build()
+      .inject(this)
   }
 
   // TODO(#89): Move this to a common test application component.
@@ -279,24 +272,20 @@ class MetricLogSchedulingWorkerTest {
       LogReportWorkerModule::class,
       LoggerModule::class,
       LoggingIdentifierModule::class,
-      NetworkConfigTestModule::class,
       NetworkConnectionUtilDebugModule::class,
       PerformanceMetricsAssessorModule::class,
       PerformanceMetricsConfigurationsModule::class,
-      PlatformParameterTestModule::class,
-      RetrofitModule::class,
-      RetrofitServiceModule::class,
+      PlatformParameterSingletonModule::class,
       RobolectricModule::class,
       SyncStatusTestModule::class,
       TestDispatcherModule::class,
       TestFirebaseLogUploaderModule::class,
       TestLogStorageModule::class,
-      TestModule::class
+      TestModule::class,
+      TestPlatformParameterModule::class
     ]
   )
-  interface TestApplicationComponent :
-    DataProvidersInjector,
-    PlatformParameterInitializationInjector {
+  interface TestApplicationComponent : DataProvidersInjector {
     @Component.Builder
     interface Builder {
       @BindsInstance
@@ -307,10 +296,7 @@ class MetricLogSchedulingWorkerTest {
     fun inject(metricLogSchedulingWorkerTest: MetricLogSchedulingWorkerTest)
   }
 
-  class TestApplication :
-    Application(),
-    DataProvidersInjectorProvider,
-    PlatformParameterInitializationInjectorProvider {
+  class TestApplication : Application(), DataProvidersInjectorProvider {
     private val component: TestApplicationComponent by lazy {
       DaggerMetricLogSchedulingWorkerTest_TestApplicationComponent.builder()
         .setApplication(this)
@@ -322,7 +308,5 @@ class MetricLogSchedulingWorkerTest {
     }
 
     override fun getDataProvidersInjector(): DataProvidersInjector = component
-
-    override fun getPlatformParameterInitializationInjector() = component
   }
 }

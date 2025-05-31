@@ -79,9 +79,8 @@ import org.oppia.android.domain.oppialogger.analytics.ApplicationLifecycleModule
 import org.oppia.android.domain.oppialogger.analytics.CpuPerformanceSnapshotterModule
 import org.oppia.android.domain.oppialogger.logscheduler.MetricLogSchedulerModule
 import org.oppia.android.domain.oppialogger.loguploader.LogReportWorkerModule
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjector
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjectorProvider
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterTestModule
+import org.oppia.android.domain.platformparameter.PlatformParameterModule
+import org.oppia.android.domain.platformparameter.PlatformParameterSingletonModule
 import org.oppia.android.domain.question.QuestionModule
 import org.oppia.android.domain.workmanager.WorkManagerConfigurationModule
 import org.oppia.android.testing.FakeFirestoreInstanceWrapperImpl
@@ -778,7 +777,8 @@ class ViewEventLogsFragmentTest {
       NumericInputRuleModule::class,
       PerformanceMetricsAssessorModule::class,
       PerformanceMetricsConfigurationsModule::class,
-      PlatformParameterTestModule::class,
+      PlatformParameterModule::class,
+      PlatformParameterSingletonModule::class,
       QuestionModule::class,
       RatioInputModule::class,
       RetrofitModule::class,
@@ -798,9 +798,7 @@ class ViewEventLogsFragmentTest {
   )
 
   /** [ApplicationComponent] for [ViewEventLogsFragmentTest]. */
-  interface TestApplicationComponent :
-    ApplicationComponent,
-    PlatformParameterInitializationInjector {
+  interface TestApplicationComponent : ApplicationComponent {
 
     /** [ApplicationComponent.Builder] for [TestApplicationComponent]. */
     @Component.Builder
@@ -816,11 +814,7 @@ class ViewEventLogsFragmentTest {
   }
 
   /** [Application] class for [ViewEventLogsFragmentTest]. */
-  class TestApplication :
-    Application(),
-    ActivityComponentFactory,
-    ApplicationInjectorProvider,
-    PlatformParameterInitializationInjectorProvider {
+  class TestApplication : Application(), ActivityComponentFactory, ApplicationInjectorProvider {
     private val component: TestApplicationComponent by lazy {
       DaggerViewEventLogsFragmentTest_TestApplicationComponent.builder()
         .setApplication(this)
@@ -842,7 +836,5 @@ class ViewEventLogsFragmentTest {
     }
 
     override fun getApplicationInjector(): ApplicationInjector = component
-
-    override fun getPlatformParameterInitializationInjector() = component
   }
 }

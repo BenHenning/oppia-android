@@ -10,15 +10,11 @@ import dagger.Component
 import dagger.Module
 import dagger.Provides
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.oppia.android.app.model.ExceptionLog.ExceptionType
 import org.oppia.android.domain.oppialogger.ExceptionLogStorageCacheSize
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjector
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjectorProvider
 import org.oppia.android.testing.FakeExceptionLogger
-import org.oppia.android.testing.OppiaTestRule
 import org.oppia.android.testing.TestLogReportingModule
 import org.oppia.android.testing.data.DataProviderTestMonitor
 import org.oppia.android.testing.robolectric.RobolectricModule
@@ -52,9 +48,6 @@ private const val TEST_TIMESTAMP_IN_MILLIS_FOUR = 1556094000000
 @LooperMode(LooperMode.Mode.PAUSED)
 @Config(application = ExceptionsControllerTest.TestApplication::class)
 class ExceptionsControllerTest {
-  @get:Rule
-  val oppiaTestRule = OppiaTestRule()
-
   @Inject lateinit var dataProviders: DataProviders
   @Inject lateinit var exceptionsController: ExceptionsController
   @Inject lateinit var networkConnectionUtil: NetworkConnectionDebugUtil
@@ -356,9 +349,7 @@ class ExceptionsControllerTest {
       TestModule::class
     ]
   )
-  interface TestApplicationComponent :
-    DataProvidersInjector,
-    PlatformParameterInitializationInjector {
+  interface TestApplicationComponent : DataProvidersInjector {
     @Component.Builder
     interface Builder {
       @BindsInstance
@@ -369,10 +360,7 @@ class ExceptionsControllerTest {
     fun inject(exceptionsControllerTest: ExceptionsControllerTest)
   }
 
-  class TestApplication :
-    Application(),
-    DataProvidersInjectorProvider,
-    PlatformParameterInitializationInjectorProvider {
+  class TestApplication : Application(), DataProvidersInjectorProvider {
     private val component: TestApplicationComponent by lazy {
       DaggerExceptionsControllerTest_TestApplicationComponent.builder()
         .setApplication(this)
@@ -384,7 +372,5 @@ class ExceptionsControllerTest {
     }
 
     override fun getDataProvidersInjector(): DataProvidersInjector = component
-
-    override fun getPlatformParameterInitializationInjector() = component
   }
 }

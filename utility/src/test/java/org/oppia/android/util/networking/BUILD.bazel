@@ -12,7 +12,6 @@ oppia_android_test(
     test_manifest = "//utility:test_manifest",
     deps = [
         "//:dagger",
-        "//testing",
         "//testing/src/main/java/org/oppia/android/testing/networking:network_connection_test_util",
         "//testing/src/main/java/org/oppia/android/testing/robolectric:test_module",
         "//testing/src/main/java/org/oppia/android/testing/time:test_module",
@@ -35,7 +34,6 @@ oppia_android_test(
     test_manifest = "//utility:test_manifest",
     deps = [
         "//:dagger",
-        "//testing",
         "//testing/src/main/java/org/oppia/android/testing/networking:network_connection_test_util",
         "//testing/src/main/java/org/oppia/android/testing/robolectric:test_module",
         "//testing/src/main/java/org/oppia/android/testing/time:test_module",
@@ -58,7 +56,6 @@ oppia_android_test(
     test_manifest = "//utility:test_manifest",
     deps = [
         "//:dagger",
-        "//testing",
         "//testing/src/main/java/org/oppia/android/testing/networking:network_connection_test_util",
         "//testing/src/main/java/org/oppia/android/testing/robolectric:test_module",
         "//testing/src/main/java/org/oppia/android/testing/time:test_module",
@@ -81,7 +78,6 @@ oppia_android_test(
     test_manifest = "//utility:test_manifest",
     deps = [
         "//:dagger",
-        "//testing",
         "//testing/src/main/java/org/oppia/android/testing/networking:network_connection_test_util",
         "//testing/src/main/java/org/oppia/android/testing/robolectric:test_module",
         "//testing/src/main/java/org/oppia/android/testing/time:test_module",

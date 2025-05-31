@@ -12,15 +12,12 @@ oppia_android_test(
     test_manifest = "//domain:test_manifest",
     deps = [
         "//:dagger",
-        "//data/src/main/java/org/oppia/android/data/backends/gae:retrofit_module",
-        "//data/src/main/java/org/oppia/android/data/backends/gae/testing:network_config_test_module",
         "//domain/src/main/java/org/oppia/android/domain/oppialogger/analytics:cpu_module",
         "//domain/src/main/java/org/oppia/android/domain/oppialogger/analytics:prod_module",
         "//domain/src/main/java/org/oppia/android/domain/oppialogger/analytics/testing:fake_log_scheduler",
-        "//domain/src/main/java/org/oppia/android/domain/platformparameter/testing:platform_parameter_test_initializer",
-        "//domain/src/main/java/org/oppia/android/domain/platformparameter/testing:test_module",
         "//testing",
         "//testing/src/main/java/org/oppia/android/testing/data:data_provider_test_monitor",
+        "//testing/src/main/java/org/oppia/android/testing/platformparameter:test_module",
         "//testing/src/main/java/org/oppia/android/testing/robolectric:test_module",
         "//testing/src/main/java/org/oppia/android/testing/threading:test_coroutine_dispatchers",
         "//testing/src/main/java/org/oppia/android/testing/threading:test_module",
@@ -37,6 +34,5 @@ oppia_android_test(
         "//utility/src/main/java/org/oppia/android/util/logging/performancemetrics:performance_metrics_configurations_module",
         "//utility/src/main/java/org/oppia/android/util/networking:debug_module",
         "//utility/src/main/java/org/oppia/android/util/networking:prod_module",
-        "//utility/src/main/java/org/oppia/android/util/system:prod_module",
     ],
 )

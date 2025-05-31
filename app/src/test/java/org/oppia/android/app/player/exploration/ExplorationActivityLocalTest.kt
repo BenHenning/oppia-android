@@ -34,7 +34,6 @@ import org.oppia.android.app.devoptions.DeveloperOptionsStarterModule
 import org.oppia.android.app.model.EventLog
 import org.oppia.android.app.model.EventLog.Context.ActivityContextCase.OPEN_EXPLORATION_ACTIVITY
 import org.oppia.android.app.model.ExplorationActivityParams
-import org.oppia.android.app.model.FeatureFlagId.NPS_SURVEY
 import org.oppia.android.app.model.ProfileId
 import org.oppia.android.app.model.Spotlight
 import org.oppia.android.app.player.state.itemviewmodel.SplitScreenInteractionModule
@@ -73,9 +72,7 @@ import org.oppia.android.domain.oppialogger.analytics.ApplicationLifecycleModule
 import org.oppia.android.domain.oppialogger.analytics.CpuPerformanceSnapshotterModule
 import org.oppia.android.domain.oppialogger.logscheduler.MetricLogSchedulerModule
 import org.oppia.android.domain.oppialogger.loguploader.LogReportWorkerModule
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjector
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjectorProvider
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterTestModule
+import org.oppia.android.domain.platformparameter.PlatformParameterSingletonModule
 import org.oppia.android.domain.profile.ProfileManagementController
 import org.oppia.android.domain.question.QuestionModule
 import org.oppia.android.domain.spotlight.SpotlightStateController
@@ -83,12 +80,11 @@ import org.oppia.android.domain.topic.TEST_EXPLORATION_ID_2
 import org.oppia.android.domain.topic.TEST_STORY_ID_0
 import org.oppia.android.domain.topic.TEST_TOPIC_ID_0
 import org.oppia.android.domain.workmanager.WorkManagerConfigurationModule
-import org.oppia.android.testing.EnableFeatureFlag
 import org.oppia.android.testing.FakeAnalyticsEventLogger
-import org.oppia.android.testing.OppiaTestRule
 import org.oppia.android.testing.TestLogReportingModule
 import org.oppia.android.testing.firebase.TestAuthenticationModule
 import org.oppia.android.testing.junit.InitializeDefaultLocaleRule
+import org.oppia.android.testing.platformparameter.TestPlatformParameterModule
 import org.oppia.android.testing.robolectric.RobolectricModule
 import org.oppia.android.testing.threading.TestCoroutineDispatchers
 import org.oppia.android.testing.threading.TestDispatcherModule
@@ -120,9 +116,6 @@ import javax.inject.Singleton
   qualifiers = "port-xxhdpi"
 )
 class ExplorationActivityLocalTest {
-  @get:Rule
-  val oppiaTestRule = OppiaTestRule()
-
   @get:Rule
   val initializeDefaultLocaleRule = InitializeDefaultLocaleRule()
 
@@ -182,9 +175,8 @@ class ExplorationActivityLocalTest {
   }
 
   @Test
-  @EnableFeatureFlag(NPS_SURVEY)
   fun testExplorationActivity_closeExploration_surveyGatingCriteriaMet_showsSurveyPopup() {
-    setUpTestApplicationComponent()
+    setUpTestWithNpsEnabled()
     fakeOppiaClock.setFakeTimeMode(FakeOppiaClock.FakeTimeMode.MODE_FIXED_FAKE_TIME)
     fakeOppiaClock.setCurrentTimeMs(afternoonUtcTimestampMillis)
 
@@ -236,9 +228,8 @@ class ExplorationActivityLocalTest {
   }
 
   @Test
-  @EnableFeatureFlag(NPS_SURVEY)
   fun testExplorationActivity_closeExploration_surveyGatingCriteriaNotMet_noSurveyPopup() {
-    setUpTestApplicationComponent()
+    setUpTestWithNpsEnabled()
     getApplicationDependencies(
       internalProfileId,
       TEST_CLASSROOM_ID_0,
@@ -283,9 +274,8 @@ class ExplorationActivityLocalTest {
   }
 
   @Test
-  @EnableFeatureFlag(NPS_SURVEY)
   fun testExplorationActivity_updateGatingProvider_surveyGatingCriteriaMet_keepsSurveyDialog() {
-    setUpTestApplicationComponent()
+    setUpTestWithNpsEnabled()
     fakeOppiaClock.setFakeTimeMode(FakeOppiaClock.FakeTimeMode.MODE_FIXED_FAKE_TIME)
     fakeOppiaClock.setCurrentTimeMs(afternoonUtcTimestampMillis)
 
@@ -346,6 +336,11 @@ class ExplorationActivityLocalTest {
         .inRoot(isDialog())
         .check(matches(isDisplayed()))
     }
+  }
+
+  private fun setUpTestWithNpsEnabled() {
+    TestPlatformParameterModule.forceEnableNpsSurvey(true)
+    setUpTestApplicationComponent()
   }
 
   private fun markAllSpotlightsSeen() {
@@ -454,7 +449,7 @@ class ExplorationActivityLocalTest {
       NumberWithUnitsRuleModule::class,
       NumericExpressionInputModule::class,
       NumericInputRuleModule::class,
-      PlatformParameterTestModule::class,
+      PlatformParameterSingletonModule::class,
       QuestionModule::class,
       RatioInputModule::class,
       RetrofitModule::class,
@@ -465,15 +460,14 @@ class ExplorationActivityLocalTest {
       TestAuthenticationModule::class,
       TestDispatcherModule::class,
       TestLogReportingModule::class,
+      TestPlatformParameterModule::class,
       TestingBuildFlavorModule::class,
       TextInputRuleModule::class,
       ViewBindingShimModule::class,
       WorkManagerConfigurationModule::class
     ]
   )
-  interface TestApplicationComponent :
-    ApplicationComponent,
-    PlatformParameterInitializationInjector {
+  interface TestApplicationComponent : ApplicationComponent {
     @Component.Builder
     interface Builder : ApplicationComponent.Builder {
       override fun build(): TestApplicationComponent
@@ -482,11 +476,7 @@ class ExplorationActivityLocalTest {
     fun inject(explorationActivityLocalTest: ExplorationActivityLocalTest)
   }
 
-  class TestApplication :
-    Application(),
-    ActivityComponentFactory,
-    ApplicationInjectorProvider,
-    PlatformParameterInitializationInjectorProvider {
+  class TestApplication : Application(), ActivityComponentFactory, ApplicationInjectorProvider {
     private val component: TestApplicationComponent by lazy {
       DaggerExplorationActivityLocalTest_TestApplicationComponent.builder()
         .setApplication(this)
@@ -502,7 +492,5 @@ class ExplorationActivityLocalTest {
     }
 
     override fun getApplicationInjector(): ApplicationInjector = component
-
-    override fun getPlatformParameterInitializationInjector() = component
   }
 }

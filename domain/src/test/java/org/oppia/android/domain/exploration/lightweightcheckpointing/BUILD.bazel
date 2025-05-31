@@ -12,8 +12,6 @@ oppia_android_test(
     test_manifest = "//domain:test_manifest",
     deps = [
         "//:dagger",
-        "//data/src/main/java/org/oppia/android/data/backends/gae:retrofit_module",
-        "//data/src/main/java/org/oppia/android/data/backends/gae/testing:network_config_test_module",
         "//domain/src/main/java/org/oppia/android/domain/classify:interactions_module",
         "//domain/src/main/java/org/oppia/android/domain/classify/rules/algebraicexpressioninput:algebraic_expression_input_rule_module",
         "//domain/src/main/java/org/oppia/android/domain/classify/rules/continueinteraction:continue_module",
@@ -31,8 +29,6 @@ oppia_android_test(
         "//domain/src/main/java/org/oppia/android/domain/exploration/testing:test_module",
         "//domain/src/main/java/org/oppia/android/domain/oppialogger:prod_module",
         "//domain/src/main/java/org/oppia/android/domain/oppialogger/analytics:prod_module",
-        "//domain/src/main/java/org/oppia/android/domain/platformparameter/testing:platform_parameter_test_initializer",
-        "//domain/src/main/java/org/oppia/android/domain/platformparameter/testing:test_module",
         "//testing",
         "//testing/src/main/java/org/oppia/android/testing/data:data_provider_test_monitor",
         "//testing/src/main/java/org/oppia/android/testing/robolectric:test_module",

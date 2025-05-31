@@ -17,21 +17,15 @@ import dagger.BindsInstance
 import dagger.Component
 import dagger.Module
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.oppia.android.data.backends.gae.RetrofitModule
-import org.oppia.android.data.backends.gae.RetrofitServiceModule
-import org.oppia.android.data.backends.gae.testing.NetworkConfigTestModule
 import org.oppia.android.domain.oppialogger.LogStorageModule
 import org.oppia.android.domain.oppialogger.LoggingIdentifierModule
 import org.oppia.android.domain.oppialogger.analytics.ApplicationLifecycleModule
 import org.oppia.android.domain.oppialogger.analytics.CpuPerformanceSnapshotterModule
 import org.oppia.android.domain.oppialogger.loguploader.LogReportWorkerModule
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjector
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjectorProvider
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterTestModule
-import org.oppia.android.testing.OppiaTestRule
+import org.oppia.android.domain.platformparameter.PlatformParameterModule
+import org.oppia.android.domain.platformparameter.PlatformParameterSingletonModule
 import org.oppia.android.testing.TestLogReportingModule
 import org.oppia.android.testing.logging.SyncStatusTestModule
 import org.oppia.android.testing.robolectric.RobolectricModule
@@ -58,7 +52,6 @@ import javax.inject.Singleton
 @LooperMode(LooperMode.Mode.PAUSED)
 @Config(application = PerformanceMetricsLogSchedulerTest.TestApplication::class)
 class PerformanceMetricsLogSchedulerTest {
-  @get:Rule val oppiaTestRule = OppiaTestRule()
 
   @Inject
   lateinit var performanceMetricsLogScheduler: PerformanceMetricsLogScheduler
@@ -162,7 +155,10 @@ class PerformanceMetricsLogSchedulerTest {
   }
 
   private fun setUpTestApplicationComponent() {
-    ApplicationProvider.getApplicationContext<TestApplication>().inject(this)
+    DaggerPerformanceMetricsLogSchedulerTest_TestApplicationComponent.builder()
+      .setApplication(ApplicationProvider.getApplicationContext())
+      .build()
+      .inject(this)
   }
 
   // TODO(#89): Move this to a common test application component.
@@ -186,12 +182,10 @@ class PerformanceMetricsLogSchedulerTest {
       LoggerModule::class,
       LoggingIdentifierModule::class,
       MetricLogSchedulerModule::class,
-      NetworkConfigTestModule::class,
       NetworkConnectionUtilDebugModule::class,
       PerformanceMetricsConfigurationsModule::class,
-      PlatformParameterTestModule::class,
-      RetrofitModule::class,
-      RetrofitServiceModule::class,
+      PlatformParameterModule::class,
+      PlatformParameterSingletonModule::class,
       RobolectricModule::class,
       SyncStatusTestModule::class,
       TestDispatcherModule::class,
@@ -199,9 +193,7 @@ class PerformanceMetricsLogSchedulerTest {
       TestModule::class
     ]
   )
-  interface TestApplicationComponent :
-    DataProvidersInjector,
-    PlatformParameterInitializationInjector {
+  interface TestApplicationComponent : DataProvidersInjector {
     @Component.Builder
     interface Builder {
       @BindsInstance
@@ -213,10 +205,7 @@ class PerformanceMetricsLogSchedulerTest {
     fun inject(performanceMetricsLogSchedulerTest: PerformanceMetricsLogSchedulerTest)
   }
 
-  class TestApplication :
-    Application(),
-    DataProvidersInjectorProvider,
-    PlatformParameterInitializationInjectorProvider {
+  class TestApplication : Application(), DataProvidersInjectorProvider {
     private val component: TestApplicationComponent by lazy {
       DaggerPerformanceMetricsLogSchedulerTest_TestApplicationComponent.builder()
         .setApplication(this)
@@ -228,7 +217,5 @@ class PerformanceMetricsLogSchedulerTest {
     }
 
     override fun getDataProvidersInjector(): DataProvidersInjector = component
-
-    override fun getPlatformParameterInitializationInjector() = component
   }
 }

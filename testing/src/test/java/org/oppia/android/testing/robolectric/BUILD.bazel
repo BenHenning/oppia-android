@@ -12,7 +12,6 @@ oppia_android_test(
     test_manifest = "//testing:test_manifest",
     deps = [
         "//:dagger",
-        "//testing",
         "//testing/src/main/java/org/oppia/android/testing/robolectric:oppia_shadow_activity_manager",
         "//third_party:androidx_core_core",
         "//third_party:androidx_test_ext_junit",
@@ -31,7 +30,6 @@ oppia_android_test(
     test_manifest = "//testing:test_manifest",
     deps = [
         "//:dagger",
-        "//testing",
         "//testing/src/main/java/org/oppia/android/testing/robolectric:oppia_shadow_traffic_stats",
         "//third_party:androidx_core_core",
         "//third_party:androidx_test_ext_junit",
@@ -50,7 +48,6 @@ oppia_android_test(
     test_manifest = "//testing:test_manifest",
     deps = [
         "//:dagger",
-        "//testing",
         "//testing/src/main/java/org/oppia/android/testing/robolectric:shadow_bidi_formatter",
         "//third_party:androidx_core_core",
         "//third_party:androidx_test_ext_junit",

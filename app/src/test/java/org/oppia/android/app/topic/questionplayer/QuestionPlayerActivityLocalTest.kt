@@ -72,16 +72,14 @@ import org.oppia.android.domain.oppialogger.analytics.ApplicationLifecycleModule
 import org.oppia.android.domain.oppialogger.analytics.CpuPerformanceSnapshotterModule
 import org.oppia.android.domain.oppialogger.logscheduler.MetricLogSchedulerModule
 import org.oppia.android.domain.oppialogger.loguploader.LogReportWorkerModule
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjector
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjectorProvider
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterTestModule
+import org.oppia.android.domain.platformparameter.PlatformParameterModule
+import org.oppia.android.domain.platformparameter.PlatformParameterSingletonModule
 import org.oppia.android.domain.question.InternalMasteryMultiplyFactor
 import org.oppia.android.domain.question.InternalScoreMultiplyFactor
 import org.oppia.android.domain.question.MaxMasteryGainPerQuestion
 import org.oppia.android.domain.question.MaxMasteryLossPerQuestion
 import org.oppia.android.domain.question.MaxScorePerQuestion
 import org.oppia.android.domain.question.QuestionCountPerTrainingSession
-import org.oppia.android.domain.question.QuestionModule
 import org.oppia.android.domain.question.QuestionTrainingSeed
 import org.oppia.android.domain.question.ViewHintMasteryPenalty
 import org.oppia.android.domain.question.ViewHintScorePenalty
@@ -89,7 +87,6 @@ import org.oppia.android.domain.question.WrongAnswerMasteryPenalty
 import org.oppia.android.domain.question.WrongAnswerScorePenalty
 import org.oppia.android.domain.topic.TEST_SKILL_ID_1
 import org.oppia.android.domain.workmanager.WorkManagerConfigurationModule
-import org.oppia.android.testing.OppiaTestRule
 import org.oppia.android.testing.TestLogReportingModule
 import org.oppia.android.testing.espresso.EditTextInputAction
 import org.oppia.android.testing.espresso.KonfettiViewMatcher.Companion.hasActiveConfetti
@@ -130,9 +127,6 @@ import javax.inject.Singleton
   qualifiers = "port-xxhdpi"
 )
 class QuestionPlayerActivityLocalTest {
-  @get:Rule
-  val oppiaTestRule = OppiaTestRule()
-
   @get:Rule
   val initializeDefaultLocaleRule = InitializeDefaultLocaleRule()
 
@@ -538,8 +532,8 @@ class QuestionPlayerActivityLocalTest {
       NumberWithUnitsRuleModule::class,
       NumericExpressionInputModule::class,
       NumericInputRuleModule::class,
-      PlatformParameterTestModule::class,
-      QuestionModule::class,
+      PlatformParameterModule::class,
+      PlatformParameterSingletonModule::class,
       QuestionPlayerActivityLocalTestModule::class,
       RatioInputModule::class,
       RetrofitModule::class,
@@ -556,9 +550,7 @@ class QuestionPlayerActivityLocalTest {
       WorkManagerConfigurationModule::class
     ]
   )
-  interface TestApplicationComponent :
-    ApplicationComponent,
-    PlatformParameterInitializationInjector {
+  interface TestApplicationComponent : ApplicationComponent {
     @Component.Builder
     interface Builder : ApplicationComponent.Builder {
       override fun build(): TestApplicationComponent
@@ -567,11 +559,7 @@ class QuestionPlayerActivityLocalTest {
     fun inject(questionPlayerActivityLocalTest: QuestionPlayerActivityLocalTest)
   }
 
-  class TestApplication :
-    Application(),
-    ActivityComponentFactory,
-    ApplicationInjectorProvider,
-    PlatformParameterInitializationInjectorProvider {
+  class TestApplication : Application(), ActivityComponentFactory, ApplicationInjectorProvider {
     private val component: TestApplicationComponent by lazy {
       DaggerQuestionPlayerActivityLocalTest_TestApplicationComponent.builder()
         .setApplication(this)
@@ -587,7 +575,5 @@ class QuestionPlayerActivityLocalTest {
     }
 
     override fun getApplicationInjector(): ApplicationInjector = component
-
-    override fun getPlatformParameterInitializationInjector() = component
   }
 }

@@ -17,14 +17,10 @@ import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.oppia.android.data.backends.gae.api.PlatformParameterService
 import org.oppia.android.data.backends.gae.testing.NetworkConfigTestModule
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjector
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjectorProvider
-import org.oppia.android.testing.OppiaTestRule
 import org.oppia.android.testing.TestLogReportingModule
 import org.oppia.android.testing.robolectric.RobolectricModule
 import org.oppia.android.testing.threading.BackgroundTestDispatcher
@@ -44,8 +40,6 @@ import javax.inject.Singleton
 @Config(application = RemoteAuthNetworkInterceptorTest.TestApplication::class)
 @LooperMode(LooperMode.Mode.PAUSED)
 class RemoteAuthNetworkInterceptorTest {
-  @get:Rule val oppiaTestRule = OppiaTestRule()
-
   @Inject lateinit var context: Context
   @Inject lateinit var remoteAuthNetworkInterceptor: RemoteAuthNetworkInterceptor
   @Inject lateinit var moshi: Moshi
@@ -159,9 +153,7 @@ class RemoteAuthNetworkInterceptorTest {
       TestModule::class
     ]
   )
-  interface TestApplicationComponent :
-    DataProvidersInjector,
-    PlatformParameterInitializationInjector {
+  interface TestApplicationComponent : DataProvidersInjector {
     @Component.Builder
     interface Builder {
       @BindsInstance
@@ -173,10 +165,7 @@ class RemoteAuthNetworkInterceptorTest {
     fun inject(remoteAuthNetworkInterceptorTest: RemoteAuthNetworkInterceptorTest)
   }
 
-  class TestApplication :
-    Application(),
-    DataProvidersInjectorProvider,
-    PlatformParameterInitializationInjectorProvider {
+  class TestApplication : Application(), DataProvidersInjectorProvider {
     private val component: TestApplicationComponent by lazy {
       DaggerRemoteAuthNetworkInterceptorTest_TestApplicationComponent.builder()
         .setApplication(this)
@@ -192,7 +181,5 @@ class RemoteAuthNetworkInterceptorTest {
     }
 
     override fun getDataProvidersInjector(): DataProvidersInjector = component
-
-    override fun getPlatformParameterInitializationInjector() = component
   }
 }

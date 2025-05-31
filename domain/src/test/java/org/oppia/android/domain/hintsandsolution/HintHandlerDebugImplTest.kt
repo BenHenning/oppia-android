@@ -33,9 +33,6 @@ import org.oppia.android.app.model.State
 import org.oppia.android.domain.devoptions.ShowAllHintsAndSolutionController
 import org.oppia.android.domain.exploration.ExplorationRetriever
 import org.oppia.android.domain.exploration.testing.ExplorationStorageTestModule
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjector
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjectorProvider
-import org.oppia.android.testing.OppiaTestRule
 import org.oppia.android.testing.TestLogReportingModule
 import org.oppia.android.testing.environment.TestEnvironmentConfig
 import org.oppia.android.testing.robolectric.RobolectricModule
@@ -60,9 +57,6 @@ import javax.inject.Singleton
 @LooperMode(LooperMode.Mode.PAUSED)
 @Config(application = HintHandlerDebugImplTest.TestApplication::class)
 class HintHandlerDebugImplTest {
-  @get:Rule
-  val oppiaTestRule = OppiaTestRule()
-
   @Rule
   @JvmField
   val mockitoRule: MockitoRule = MockitoJUnit.rule()
@@ -446,9 +440,7 @@ class HintHandlerDebugImplTest {
       TestModule::class
     ]
   )
-  interface TestApplicationComponent :
-    DataProvidersInjector,
-    PlatformParameterInitializationInjector {
+  interface TestApplicationComponent : DataProvidersInjector {
     @Component.Builder
     interface Builder {
       @BindsInstance
@@ -460,10 +452,7 @@ class HintHandlerDebugImplTest {
     fun inject(hintHandlerDebugImplTest: HintHandlerDebugImplTest)
   }
 
-  class TestApplication :
-    Application(),
-    DataProvidersInjectorProvider,
-    PlatformParameterInitializationInjectorProvider {
+  class TestApplication : Application(), DataProvidersInjectorProvider {
     private val component: TestApplicationComponent by lazy {
       DaggerHintHandlerDebugImplTest_TestApplicationComponent.builder()
         .setApplication(this)
@@ -475,7 +464,5 @@ class HintHandlerDebugImplTest {
     }
 
     override fun getDataProvidersInjector(): DataProvidersInjector = component
-
-    override fun getPlatformParameterInitializationInjector() = component
   }
 }

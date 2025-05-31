@@ -2,18 +2,14 @@ package org.oppia.android.util.extensions
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
-import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.oppia.android.testing.OppiaTestRule
 import org.robolectric.annotation.LooperMode
 
 /** Tests for [StringExtensions]. */
 @RunWith(AndroidJUnit4::class)
 @LooperMode(LooperMode.Mode.PAUSED)
 class StringExtensionsTest {
-  @get:Rule
-  val oppiaTestRule = OppiaTestRule()
 
   @Test
   fun testRemoveWhitespace_stringWithoutSpaces_returnsOriginalString() {

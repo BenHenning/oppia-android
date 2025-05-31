@@ -10,10 +10,8 @@ import dagger.Component
 import dagger.Module
 import dagger.Provides
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.oppia.android.testing.OppiaTestRule
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.LooperMode
 import javax.inject.Inject
@@ -24,8 +22,6 @@ import javax.inject.Singleton
 @LooperMode(LooperMode.Mode.PAUSED)
 @Config(application = NetworkConfigProdModuleTest.TestApplication::class)
 class NetworkConfigProdModuleTest {
-  @get:Rule val oppiaTestRule = OppiaTestRule()
-
   @field:[Inject BaseUrl] lateinit var baseUrl: String
   @field:[Inject XssiPrefix] lateinit var xssiPrefix: String
   @field:[Inject NetworkApiKey] lateinit var networkApiKey: String

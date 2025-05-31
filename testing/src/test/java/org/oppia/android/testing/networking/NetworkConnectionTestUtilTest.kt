@@ -14,10 +14,8 @@ import dagger.Component
 import dagger.Module
 import dagger.Provides
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.oppia.android.testing.OppiaTestRule
 import org.oppia.android.testing.robolectric.RobolectricModule
 import org.oppia.android.testing.time.FakeOppiaClockModule
 import org.oppia.android.util.logging.EnableConsoleLog
@@ -34,8 +32,6 @@ import javax.inject.Singleton
 @LooperMode(LooperMode.Mode.PAUSED)
 @Config(manifest = Config.NONE)
 class NetworkConnectionTestUtilTest {
-  @get:Rule
-  val oppiaTestRule = OppiaTestRule()
 
   private val NO_CONNECTION = -1
 

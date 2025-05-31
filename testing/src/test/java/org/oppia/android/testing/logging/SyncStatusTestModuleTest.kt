@@ -10,13 +10,9 @@ import dagger.Component
 import dagger.Module
 import dagger.Provides
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.oppia.android.domain.oppialogger.LogStorageModule
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjector
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjectorProvider
-import org.oppia.android.testing.OppiaTestRule
 import org.oppia.android.testing.TestLogReportingModule
 import org.oppia.android.testing.robolectric.RobolectricModule
 import org.oppia.android.testing.threading.TestDispatcherModule
@@ -39,9 +35,6 @@ import javax.inject.Singleton
 @LooperMode(LooperMode.Mode.PAUSED)
 @Config(application = SyncStatusTestModuleTest.TestApplication::class)
 class SyncStatusTestModuleTest {
-  @get:Rule
-  val oppiaTestRule = OppiaTestRule()
-
   @Inject lateinit var syncStatusManager: SyncStatusManager
 
   @Before
@@ -84,9 +77,7 @@ class SyncStatusTestModuleTest {
       TestModule::class
     ]
   )
-  interface TestApplicationComponent :
-    DataProvidersInjector,
-    PlatformParameterInitializationInjector {
+  interface TestApplicationComponent : DataProvidersInjector {
     @Component.Builder
     interface Builder {
       @BindsInstance
@@ -97,10 +88,7 @@ class SyncStatusTestModuleTest {
     fun inject(test: SyncStatusTestModuleTest)
   }
 
-  class TestApplication :
-    Application(),
-    DataProvidersInjectorProvider,
-    PlatformParameterInitializationInjectorProvider {
+  class TestApplication : Application(), DataProvidersInjectorProvider {
     private val component: TestApplicationComponent by lazy {
       DaggerSyncStatusTestModuleTest_TestApplicationComponent.builder()
         .setApplication(this)
@@ -112,7 +100,5 @@ class SyncStatusTestModuleTest {
     }
 
     override fun getDataProvidersInjector() = component
-
-    override fun getPlatformParameterInitializationInjector() = component
   }
 }

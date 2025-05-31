@@ -10,10 +10,8 @@ import dagger.Component
 import dagger.Module
 import dagger.Provides
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.oppia.android.testing.OppiaTestRule
 import org.oppia.android.util.system.OppiaClock
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.LooperMode
@@ -30,9 +28,6 @@ class LoggingIdentifierModuleTest {
   private companion object {
     private const val FIXED_CURRENT_TIME_MS = 12345L
   }
-
-  @get:Rule
-  val oppiaTestRule = OppiaTestRule()
 
   @field:[JvmField Inject ApplicationIdSeed] var applicationIdSeed: Long = Long.MIN_VALUE
 

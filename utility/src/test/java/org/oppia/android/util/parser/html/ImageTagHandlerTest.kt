@@ -27,7 +27,6 @@ import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 import org.mockito.junit.MockitoJUnit
 import org.mockito.junit.MockitoRule
-import org.oppia.android.testing.OppiaTestRule
 import org.oppia.android.testing.mockito.capture
 import org.oppia.android.testing.robolectric.RobolectricModule
 import org.oppia.android.testing.threading.TestDispatcherModule
@@ -84,9 +83,6 @@ private const val IMAGE_TAG_WITH_CAPTION_MARKUP =
 @RunWith(AndroidJUnit4::class)
 @LooperMode(LooperMode.Mode.PAUSED)
 class ImageTagHandlerTest {
-  @get:Rule
-  val oppiaTestRule = OppiaTestRule()
-
   @Rule
   @JvmField
   val mockitoRule: MockitoRule = MockitoJUnit.rule()

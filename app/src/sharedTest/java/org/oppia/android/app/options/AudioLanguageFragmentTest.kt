@@ -30,7 +30,6 @@ import org.hamcrest.CoreMatchers.instanceOf
 import org.hamcrest.CoreMatchers.not
 import org.hamcrest.core.AllOf.allOf
 import org.junit.After
-import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -51,8 +50,6 @@ import org.oppia.android.app.model.AudioLanguage
 import org.oppia.android.app.model.AudioLanguage.BRAZILIAN_PORTUGUESE_LANGUAGE
 import org.oppia.android.app.model.AudioLanguage.ENGLISH_AUDIO_LANGUAGE
 import org.oppia.android.app.model.AudioLanguage.NIGERIAN_PIDGIN_LANGUAGE
-import org.oppia.android.app.model.FeatureFlagId.MULTIPLE_CLASSROOMS
-import org.oppia.android.app.model.FeatureFlagId.ONBOARDING_FLOW_V2
 import org.oppia.android.app.options.AudioLanguageFragment.Companion.retrieveLanguageFromArguments
 import org.oppia.android.app.player.state.itemviewmodel.SplitScreenInteractionModule
 import org.oppia.android.app.recyclerview.RecyclerViewMatcher.Companion.atPositionOnView
@@ -88,20 +85,17 @@ import org.oppia.android.domain.oppialogger.analytics.ApplicationLifecycleModule
 import org.oppia.android.domain.oppialogger.analytics.CpuPerformanceSnapshotterModule
 import org.oppia.android.domain.oppialogger.logscheduler.MetricLogSchedulerModule
 import org.oppia.android.domain.oppialogger.loguploader.LogReportWorkerModule
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjector
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjectorProvider
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterTestModule
+import org.oppia.android.domain.platformparameter.PlatformParameterSingletonModule
 import org.oppia.android.domain.question.QuestionModule
 import org.oppia.android.domain.workmanager.WorkManagerConfigurationModule
 import org.oppia.android.testing.BuildEnvironment
-import org.oppia.android.testing.DisableFeatureFlag
-import org.oppia.android.testing.EnableFeatureFlag
 import org.oppia.android.testing.OppiaTestRule
 import org.oppia.android.testing.RunOn
 import org.oppia.android.testing.TestLogReportingModule
 import org.oppia.android.testing.TestPlatform
 import org.oppia.android.testing.firebase.TestAuthenticationModule
 import org.oppia.android.testing.junit.InitializeDefaultLocaleRule
+import org.oppia.android.testing.platformparameter.TestPlatformParameterModule
 import org.oppia.android.testing.profile.ProfileTestHelper
 import org.oppia.android.testing.robolectric.RobolectricModule
 import org.oppia.android.testing.threading.TestCoroutineDispatchers
@@ -141,57 +135,50 @@ class AudioLanguageFragmentTest {
 
   @get:Rule
   val initializeDefaultLocaleRule = InitializeDefaultLocaleRule()
-
   @get:Rule
   val oppiaTestRule = OppiaTestRule()
 
   @Inject
   lateinit var context: Context
-
   @Inject
   lateinit var profileTestHelper: ProfileTestHelper
-
   @Inject
   lateinit var testCoroutineDispatchers: TestCoroutineDispatchers
-
-  @Before
-  fun setUp() {
-    initializeTestApplicationComponent()
-  }
 
   @After
   fun tearDown() {
     testCoroutineDispatchers.unregisterIdlingResource()
+    TestPlatformParameterModule.reset()
     Intents.release()
   }
 
   @Test
-  @DisableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testOpenFragment_withEnglish_selectedLanguageIsEnglish() {
+    initializeTestApplicationComponent(enableOnboardingFlowV2 = false)
     launchActivityWithLanguage(ENGLISH_AUDIO_LANGUAGE).use {
       verifyEnglishIsSelected()
     }
   }
 
   @Test
-  @DisableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testOpenFragment_withPortuguese_selectedLanguageIsPortuguese() {
+    initializeTestApplicationComponent(enableOnboardingFlowV2 = false)
     launchActivityWithLanguage(BRAZILIAN_PORTUGUESE_LANGUAGE).use {
       verifyPortugueseIsSelected()
     }
   }
 
   @Test
-  @DisableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testOpenFragment_withNigerianPidgin_selectedLanguageIsNaija() {
+    initializeTestApplicationComponent(enableOnboardingFlowV2 = false)
     launchActivityWithLanguage(NIGERIAN_PIDGIN_LANGUAGE).use {
       verifyNigerianPidginIsSelected()
     }
   }
 
   @Test
-  @DisableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testAudioLanguage_configChange_selectedLanguageIsEnglish() {
+    initializeTestApplicationComponent(enableOnboardingFlowV2 = false)
     launchActivityWithLanguage(ENGLISH_AUDIO_LANGUAGE).use {
       rotateToLandscape()
 
@@ -201,8 +188,8 @@ class AudioLanguageFragmentTest {
 
   @Test
   @Config(qualifiers = "sw600dp")
-  @DisableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testAudioLanguage_tabletConfig_selectedLanguageIsEnglish() {
+    initializeTestApplicationComponent(enableOnboardingFlowV2 = false)
     launchActivityWithLanguage(ENGLISH_AUDIO_LANGUAGE).use {
       testCoroutineDispatchers.runCurrent()
 
@@ -211,8 +198,8 @@ class AudioLanguageFragmentTest {
   }
 
   @Test
-  @DisableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testAudioLanguage_changeLanguageToPortuguese_selectedLanguageIsPortuguese() {
+    initializeTestApplicationComponent(enableOnboardingFlowV2 = false)
     launchActivityWithLanguage(ENGLISH_AUDIO_LANGUAGE).use {
       selectPortuguese()
 
@@ -221,8 +208,8 @@ class AudioLanguageFragmentTest {
   }
 
   @Test
-  @DisableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testAudioLanguage_changeLanguageToPortuguese_configChange_selectedLanguageIsPortuguese() {
+    initializeTestApplicationComponent(enableOnboardingFlowV2 = false)
     launchActivityWithLanguage(ENGLISH_AUDIO_LANGUAGE).use {
       selectPortuguese()
 
@@ -234,8 +221,8 @@ class AudioLanguageFragmentTest {
 
   @Test
   @Config(qualifiers = "sw600dp")
-  @DisableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testAudioLanguage_configChange_changeLanguageToPortuguese_selectedLanguageIsPortuguese() {
+    initializeTestApplicationComponent(enableOnboardingFlowV2 = false)
     launchActivityWithLanguage(ENGLISH_AUDIO_LANGUAGE).use {
       rotateToLandscape()
 
@@ -246,8 +233,8 @@ class AudioLanguageFragmentTest {
   }
 
   @Test
-  @DisableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testAudioLanguage_selectPortuguese_thenEnglish_selectedLanguageIsPortuguese() {
+    initializeTestApplicationComponent(enableOnboardingFlowV2 = false)
     launchActivityWithLanguage(ENGLISH_AUDIO_LANGUAGE).use {
       selectPortuguese()
 
@@ -258,8 +245,8 @@ class AudioLanguageFragmentTest {
   }
 
   @Test
-  @EnableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testAudioLanguage_onboardingV2Enabled_allViewsAreDisplayed() {
+    initializeTestApplicationComponent(enableOnboardingFlowV2 = true)
     launchActivityWithLanguage(ENGLISH_AUDIO_LANGUAGE).use {
       onView(withId(R.id.audio_language_text)).check(
         matches(withText("In Oppia, you can listen to lessons!"))
@@ -280,8 +267,8 @@ class AudioLanguageFragmentTest {
   }
 
   @Test
-  @EnableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testAudioLanguage_onboardingV2Enabled_configChange_allViewsAreDisplayed() {
+    initializeTestApplicationComponent(enableOnboardingFlowV2 = true)
     launchActivityWithLanguage(ENGLISH_AUDIO_LANGUAGE).use {
       onView(isRoot()).perform(orientationLandscape())
       testCoroutineDispatchers.runCurrent()
@@ -304,8 +291,8 @@ class AudioLanguageFragmentTest {
   }
 
   @Test
-  @EnableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testFragment_portraitMode_backButtonPressed_currentScreenIsDestroyed() {
+    initializeTestApplicationComponent(enableOnboardingFlowV2 = true)
     launch<AudioLanguageActivity>(
       createDefaultAudioActivityIntent(ENGLISH_AUDIO_LANGUAGE)
     ).use { scenario ->
@@ -318,8 +305,8 @@ class AudioLanguageFragmentTest {
   }
 
   @Test
-  @EnableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testFragment_landscapeMode_backButtonPressed_currentScreenIsDestroyed() {
+    initializeTestApplicationComponent(enableOnboardingFlowV2 = true)
     launch<AudioLanguageActivity>(
       createDefaultAudioActivityIntent(ENGLISH_AUDIO_LANGUAGE)
     ).use { scenario ->
@@ -334,9 +321,9 @@ class AudioLanguageFragmentTest {
   }
 
   @Test
-  @EnableFeatureFlag(ONBOARDING_FLOW_V2)
-  @DisableFeatureFlag(MULTIPLE_CLASSROOMS)
   fun testFragment_portraitMode_continueButtonClicked_launchesHomeScreen() {
+    TestPlatformParameterModule.forceEnableMultipleClassrooms(false)
+    initializeTestApplicationComponent(enableOnboardingFlowV2 = true)
     launch<AudioLanguageActivity>(
       createDefaultAudioActivityIntent(ENGLISH_AUDIO_LANGUAGE)
     ).use {
@@ -351,9 +338,9 @@ class AudioLanguageFragmentTest {
   }
 
   @Test
-  @EnableFeatureFlag(ONBOARDING_FLOW_V2)
-  @DisableFeatureFlag(MULTIPLE_CLASSROOMS)
   fun testFragment_landscapeMode_continueButtonClicked_launchesHomeScreen() {
+    TestPlatformParameterModule.forceEnableMultipleClassrooms(false)
+    initializeTestApplicationComponent(enableOnboardingFlowV2 = true)
     launch<AudioLanguageActivity>(
       createDefaultAudioActivityIntent(ENGLISH_AUDIO_LANGUAGE)
     ).use {
@@ -368,9 +355,9 @@ class AudioLanguageFragmentTest {
   }
 
   @Test
-  @EnableFeatureFlag(ONBOARDING_FLOW_V2)
-  @EnableFeatureFlag(MULTIPLE_CLASSROOMS)
   fun testFragment_multipleClassroomsEnabled_continueButtonClicked_launchesClassroomScreen() {
+    TestPlatformParameterModule.forceEnableMultipleClassrooms(true)
+    initializeTestApplicationComponent(enableOnboardingFlowV2 = true)
     launch<AudioLanguageActivity>(
       createDefaultAudioActivityIntent(ENGLISH_AUDIO_LANGUAGE)
     ).use {
@@ -385,9 +372,9 @@ class AudioLanguageFragmentTest {
   }
 
   @Test
-  @EnableFeatureFlag(ONBOARDING_FLOW_V2)
-  @EnableFeatureFlag(MULTIPLE_CLASSROOMS)
   fun testFragment_landscapeMode_multipleClassroomsEnabled_continueButtonLaunchesClassroomScreen() {
+    TestPlatformParameterModule.forceEnableMultipleClassrooms(true)
+    initializeTestApplicationComponent(enableOnboardingFlowV2 = true)
     launch<AudioLanguageActivity>(
       createDefaultAudioActivityIntent(ENGLISH_AUDIO_LANGUAGE)
     ).use {
@@ -403,9 +390,9 @@ class AudioLanguageFragmentTest {
 
   @Test
   @RunOn(TestPlatform.ROBOLECTRIC, buildEnvironments = [BuildEnvironment.BAZEL])
-  @EnableFeatureFlag(ONBOARDING_FLOW_V2)
-  @DisableFeatureFlag(MULTIPLE_CLASSROOMS)
   fun testFragment_languageSelectionChanged_selectionIsUpdated() {
+    TestPlatformParameterModule.forceEnableMultipleClassrooms(false)
+    initializeTestApplicationComponent(enableOnboardingFlowV2 = true)
     launch<AudioLanguageActivity>(
       createDefaultAudioActivityIntent(ENGLISH_AUDIO_LANGUAGE)
     ).use { scenario ->
@@ -433,9 +420,9 @@ class AudioLanguageFragmentTest {
 
   @Test
   @RunOn(TestPlatform.ROBOLECTRIC, buildEnvironments = [BuildEnvironment.BAZEL])
-  @EnableFeatureFlag(ONBOARDING_FLOW_V2)
-  @DisableFeatureFlag(MULTIPLE_CLASSROOMS)
   fun testFragment_languageSelectionChanged_configChange_selectionIsUpdated() {
+    TestPlatformParameterModule.forceEnableMultipleClassrooms(false)
+    initializeTestApplicationComponent(enableOnboardingFlowV2 = true)
     launch<AudioLanguageActivity>(
       createDefaultAudioActivityIntent(ENGLISH_AUDIO_LANGUAGE)
     ).use { scenario ->
@@ -469,8 +456,8 @@ class AudioLanguageFragmentTest {
   }
 
   @Test
-  @EnableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testFragment_fragmentLoaded_verifyCorrectArgumentsPassed() {
+    initializeTestApplicationComponent(enableOnboardingFlowV2 = true)
     launch<AudioLanguageActivity>(
       createDefaultAudioActivityIntent(ENGLISH_AUDIO_LANGUAGE)
     ).use { scenario ->
@@ -487,8 +474,8 @@ class AudioLanguageFragmentTest {
   }
 
   @Test
-  @EnableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testFragment_saveInstanceState_verifyCorrectStateRestored() {
+    initializeTestApplicationComponent(enableOnboardingFlowV2 = true)
     launch<AudioLanguageActivity>(
       createDefaultAudioActivityIntent(ENGLISH_AUDIO_LANGUAGE)
     ).use { scenario ->
@@ -515,8 +502,8 @@ class AudioLanguageFragmentTest {
   }
 
   @Test
-  @DisableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testFragment_withEnglish_verifyContentDescriptionReadsArabicLanguage() {
+    initializeTestApplicationComponent(enableOnboardingFlowV2 = false)
     launchActivityWithLanguage(ENGLISH_AUDIO_LANGUAGE).use {
       verifyEnglishIsSelected()
 
@@ -604,7 +591,8 @@ class AudioLanguageFragmentTest {
     ).check(matches(withText(expectedLanguageName)))
   }
 
-  private fun initializeTestApplicationComponent() {
+  private fun initializeTestApplicationComponent(enableOnboardingFlowV2: Boolean) {
+    TestPlatformParameterModule.forceEnableOnboardingFlowV2(enableOnboardingFlowV2)
     Intents.init()
     setUpTestApplicationComponent()
     testCoroutineDispatchers.registerIdlingResource()
@@ -662,7 +650,7 @@ class AudioLanguageFragmentTest {
       NumberWithUnitsRuleModule::class,
       NumericExpressionInputModule::class,
       NumericInputRuleModule::class,
-      PlatformParameterTestModule::class,
+      PlatformParameterSingletonModule::class,
       QuestionModule::class,
       RatioInputModule::class,
       RetrofitModule::class,
@@ -673,26 +661,21 @@ class AudioLanguageFragmentTest {
       TestAuthenticationModule::class,
       TestDispatcherModule::class,
       TestLogReportingModule::class,
+      TestPlatformParameterModule::class,
       TestingBuildFlavorModule::class,
       TextInputRuleModule::class,
       ViewBindingShimModule::class,
       WorkManagerConfigurationModule::class
     ]
   )
-  interface TestApplicationComponent :
-    ApplicationComponent,
-    PlatformParameterInitializationInjector {
+  interface TestApplicationComponent : ApplicationComponent {
     @Component.Builder
     interface Builder : ApplicationComponent.Builder
 
     fun inject(audioLanguageFragmentTest: AudioLanguageFragmentTest)
   }
 
-  class TestApplication :
-    Application(),
-    ActivityComponentFactory,
-    ApplicationInjectorProvider,
-    PlatformParameterInitializationInjectorProvider {
+  class TestApplication : Application(), ActivityComponentFactory, ApplicationInjectorProvider {
     private val component: TestApplicationComponent by lazy {
       DaggerAudioLanguageFragmentTest_TestApplicationComponent.builder()
         .setApplication(this)
@@ -708,7 +691,5 @@ class AudioLanguageFragmentTest {
     }
 
     override fun getApplicationInjector(): ApplicationInjector = component
-
-    override fun getPlatformParameterInitializationInjector() = component
   }
 }

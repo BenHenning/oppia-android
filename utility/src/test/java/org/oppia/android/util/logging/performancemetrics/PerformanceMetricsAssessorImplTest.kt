@@ -13,21 +13,17 @@ import dagger.Component
 import dagger.Module
 import dagger.Provides
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.oppia.android.app.model.OppiaMetricLog
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjector
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjectorProvider
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterTestModule
 import org.oppia.android.testing.FakeExceptionLogger
-import org.oppia.android.testing.OppiaTestRule
 import org.oppia.android.testing.TestLogReportingModule
 import org.oppia.android.testing.junit.OppiaParameterizedTestRunner
 import org.oppia.android.testing.junit.OppiaParameterizedTestRunner.Iteration
 import org.oppia.android.testing.junit.OppiaParameterizedTestRunner.Parameter
 import org.oppia.android.testing.junit.OppiaParameterizedTestRunner.SelectRunnerPlatform
 import org.oppia.android.testing.junit.ParameterizedRobolectricTestRunner
+import org.oppia.android.testing.platformparameter.TestPlatformParameterModule
 import org.oppia.android.testing.robolectric.OppiaShadowActivityManager
 import org.oppia.android.testing.robolectric.OppiaShadowTrafficStats
 import org.oppia.android.testing.robolectric.RobolectricModule
@@ -78,8 +74,6 @@ private const val TEST_CURRENT_TIME = 1665790700L
   shadows = [OppiaShadowActivityManager::class, OppiaShadowTrafficStats::class]
 )
 class PerformanceMetricsAssessorImplTest {
-  @get:Rule
-  val oppiaTestRule = OppiaTestRule()
 
   @Parameter var totalMemory: Long = Long.MIN_VALUE
   @Parameter var secondCpuValue: Long = 1200L
@@ -476,18 +470,16 @@ class PerformanceMetricsAssessorImplTest {
       FakeOppiaClockModule::class,
       LocaleProdModule::class,
       NetworkConnectionUtilDebugModule::class,
-      PlatformParameterTestModule::class,
       RobolectricModule::class,
       SyncStatusModule::class,
       TestDispatcherModule::class,
       TestLogReportingModule::class,
       TestModule::class,
-      TestPerformanceMetricsAssessorModule::class
+      TestPerformanceMetricsAssessorModule::class,
+      TestPlatformParameterModule::class
     ]
   )
-  interface TestApplicationComponent :
-    DataProvidersInjector,
-    PlatformParameterInitializationInjector {
+  interface TestApplicationComponent : DataProvidersInjector {
     @Component.Builder
     interface Builder {
       @BindsInstance
@@ -498,10 +490,7 @@ class PerformanceMetricsAssessorImplTest {
     fun inject(performanceMetricsUtilsTest: PerformanceMetricsAssessorImplTest)
   }
 
-  class TestApplication :
-    Application(),
-    DataProvidersInjectorProvider,
-    PlatformParameterInitializationInjectorProvider {
+  class TestApplication : Application(), DataProvidersInjectorProvider {
     private val component: TestApplicationComponent by lazy {
       DaggerPerformanceMetricsAssessorImplTest_TestApplicationComponent.builder()
         .setApplication(this)
@@ -513,7 +502,5 @@ class PerformanceMetricsAssessorImplTest {
     }
 
     override fun getDataProvidersInjector(): DataProvidersInjector = component
-
-    override fun getPlatformParameterInitializationInjector() = component
   }
 }

@@ -11,10 +11,8 @@ import dagger.Module
 import dagger.Provides
 import org.json.JSONObject
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.oppia.android.testing.OppiaTestRule
 import org.robolectric.annotation.LooperMode
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -23,7 +21,6 @@ import javax.inject.Singleton
 @RunWith(AndroidJUnit4::class)
 @LooperMode(LooperMode.Mode.PAUSED)
 class JsonPrefixNetworkInterceptorTest {
-  @get:Rule val oppiaTestRule = OppiaTestRule()
   @Inject lateinit var context: Context
   @Inject lateinit var jsonPrefixNetworkInterceptor: JsonPrefixNetworkInterceptor
 

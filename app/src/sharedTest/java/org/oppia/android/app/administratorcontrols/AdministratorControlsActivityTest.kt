@@ -57,8 +57,6 @@ import org.oppia.android.app.application.ApplicationStartupListenerModule
 import org.oppia.android.app.application.testing.TestingBuildFlavorModule
 import org.oppia.android.app.devoptions.DeveloperOptionsModule
 import org.oppia.android.app.devoptions.DeveloperOptionsStarterModule
-import org.oppia.android.app.model.FeatureFlagId.DOWNLOADS_SUPPORT
-import org.oppia.android.app.model.FeatureFlagId.EDIT_ACCOUNTS_OPTIONS_UI
 import org.oppia.android.app.model.ProfileId
 import org.oppia.android.app.model.ScreenName
 import org.oppia.android.app.player.state.itemviewmodel.SplitScreenInteractionModule
@@ -103,17 +101,14 @@ import org.oppia.android.domain.oppialogger.analytics.ApplicationLifecycleModule
 import org.oppia.android.domain.oppialogger.analytics.CpuPerformanceSnapshotterModule
 import org.oppia.android.domain.oppialogger.logscheduler.MetricLogSchedulerModule
 import org.oppia.android.domain.oppialogger.loguploader.LogReportWorkerModule
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjector
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjectorProvider
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterTestModule
+import org.oppia.android.domain.platformparameter.PlatformParameterSingletonModule
 import org.oppia.android.domain.question.QuestionModule
 import org.oppia.android.domain.workmanager.WorkManagerConfigurationModule
-import org.oppia.android.testing.DisableFeatureFlag
-import org.oppia.android.testing.EnableFeatureFlag
 import org.oppia.android.testing.OppiaTestRule
 import org.oppia.android.testing.TestLogReportingModule
 import org.oppia.android.testing.firebase.TestAuthenticationModule
 import org.oppia.android.testing.junit.InitializeDefaultLocaleRule
+import org.oppia.android.testing.platformparameter.TestPlatformParameterModule
 import org.oppia.android.testing.profile.ProfileTestHelper
 import org.oppia.android.testing.robolectric.RobolectricModule
 import org.oppia.android.testing.threading.TestCoroutineDispatchers
@@ -145,7 +140,6 @@ import javax.inject.Singleton
   application = AdministratorControlsActivityTest.TestApplication::class,
   qualifiers = "port-xxhdpi"
 )
-@EnableFeatureFlag(EDIT_ACCOUNTS_OPTIONS_UI)
 class AdministratorControlsActivityTest {
   @get:Rule val initializeDefaultLocaleRule = InitializeDefaultLocaleRule()
   @get:Rule val oppiaTestRule = OppiaTestRule()
@@ -175,6 +169,7 @@ class AdministratorControlsActivityTest {
 
   @Before
   fun setUp() {
+    TestPlatformParameterModule.forceEnableEditAccountsOptionsUi(true)
     Intents.init()
     setUpTestApplicationComponent()
     testCoroutineDispatchers.registerIdlingResource()
@@ -227,8 +222,9 @@ class AdministratorControlsActivityTest {
   }
 
   @Test
-  @DisableFeatureFlag(EDIT_ACCOUNTS_OPTIONS_UI)
   fun testAdministratorControlsFragment_editAccountOptionsDisabled_generalOptionsIsNotDisplayed() {
+    TestPlatformParameterModule.forceEnableEditAccountsOptionsUi(false)
+
     launch<AdministratorControlsActivity>(
       createAdministratorControlsActivityIntent(
         profileId = profileId
@@ -610,8 +606,8 @@ class AdministratorControlsActivityTest {
 
   @Test
   @Config(qualifiers = "sw600dp")
-  @EnableFeatureFlag(DOWNLOADS_SUPPORT)
   fun testAdminControls_selectAdmin_tabletConfigChange_downloadsEnabled_hasNoDownloadSettings() {
+    TestPlatformParameterModule.forceEnableDownloadsSupport(true)
     launch<AdministratorControlsActivity>(
       createAdministratorControlsActivityIntent(
         profileId = profileId
@@ -629,8 +625,8 @@ class AdministratorControlsActivityTest {
 
   @Test
   @Config(qualifiers = "sw600dp")
-  @EnableFeatureFlag(DOWNLOADS_SUPPORT)
   fun testAdminControls_selectUser_tabletConfigChange_downloadsEnabled_hasDownloadSettings() {
+    TestPlatformParameterModule.forceEnableDownloadsSupport(true)
     launch<AdministratorControlsActivity>(
       createAdministratorControlsActivityIntent(
         profileId = profileId
@@ -649,8 +645,8 @@ class AdministratorControlsActivityTest {
 
   @Test
   @Config(qualifiers = "sw600dp")
-  @EnableFeatureFlag(DOWNLOADS_SUPPORT)
   fun testAdminControls_selectAdmin_tabletConfigChange_downloadsDisabled_hasNoDownloadSettings() {
+    TestPlatformParameterModule.forceEnableDownloadsSupport(false)
     launch<AdministratorControlsActivity>(
       createAdministratorControlsActivityIntent(
         profileId = profileId
@@ -670,8 +666,8 @@ class AdministratorControlsActivityTest {
 
   @Test
   @Config(qualifiers = "sw600dp")
-  @DisableFeatureFlag(DOWNLOADS_SUPPORT)
   fun testAdminControls_selectUser_tabletConfigChange_downloadsDisabled_hasNoDownloadSettings() {
+    TestPlatformParameterModule.forceEnableDownloadsSupport(false)
     launch<AdministratorControlsActivity>(
       createAdministratorControlsActivityIntent(
         profileId = profileId
@@ -939,7 +935,7 @@ class AdministratorControlsActivityTest {
       NumberWithUnitsRuleModule::class,
       NumericExpressionInputModule::class,
       NumericInputRuleModule::class,
-      PlatformParameterTestModule::class,
+      PlatformParameterSingletonModule::class,
       QuestionModule::class,
       RatioInputModule::class,
       RetrofitModule::class,
@@ -950,15 +946,14 @@ class AdministratorControlsActivityTest {
       TestAuthenticationModule::class,
       TestDispatcherModule::class,
       TestLogReportingModule::class,
+      TestPlatformParameterModule::class,
       TestingBuildFlavorModule::class,
       TextInputRuleModule::class,
       ViewBindingShimModule::class,
       WorkManagerConfigurationModule::class
     ]
   )
-  interface TestApplicationComponent :
-    ApplicationComponent,
-    PlatformParameterInitializationInjector {
+  interface TestApplicationComponent : ApplicationComponent {
     @Component.Builder
     interface Builder : ApplicationComponent.Builder {
       override fun build(): TestApplicationComponent
@@ -967,11 +962,7 @@ class AdministratorControlsActivityTest {
     fun inject(administratorControlsActivityTest: AdministratorControlsActivityTest)
   }
 
-  class TestApplication :
-    Application(),
-    ActivityComponentFactory,
-    ApplicationInjectorProvider,
-    PlatformParameterInitializationInjectorProvider {
+  class TestApplication : Application(), ActivityComponentFactory, ApplicationInjectorProvider {
     private val component: TestApplicationComponent by lazy {
       DaggerAdministratorControlsActivityTest_TestApplicationComponent.builder()
         .setApplication(this)
@@ -987,7 +978,5 @@ class AdministratorControlsActivityTest {
     }
 
     override fun getApplicationInjector(): ApplicationInjector = component
-
-    override fun getPlatformParameterInitializationInjector() = component
   }
 }

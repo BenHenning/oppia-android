@@ -12,12 +12,8 @@ import dagger.Module
 import dagger.Provides
 import kotlinx.coroutines.CoroutineDispatcher
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjector
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjectorProvider
-import org.oppia.android.testing.OppiaTestRule
 import org.oppia.android.testing.TestLogReportingModule
 import org.oppia.android.testing.robolectric.IsOnRobolectric
 import org.oppia.android.util.data.DataProvidersInjector
@@ -46,9 +42,6 @@ import kotlin.reflect.KClass
   qualifiers = "port-xxhdpi"
 )
 class TestCoroutineDispatcherTest {
-  @get:Rule
-  val oppiaTestRule = OppiaTestRule()
-
   @Inject
   @field:BackgroundTestDispatcher
   lateinit var backgroundTestDispatcher: TestCoroutineDispatcher
@@ -234,9 +227,7 @@ class TestCoroutineDispatcherTest {
       TestModule::class
     ]
   )
-  interface TestApplicationComponent :
-    DataProvidersInjector,
-    PlatformParameterInitializationInjector {
+  interface TestApplicationComponent : DataProvidersInjector {
     @Component.Builder
     interface Builder {
       @BindsInstance
@@ -247,10 +238,7 @@ class TestCoroutineDispatcherTest {
     fun inject(test: TestCoroutineDispatcherTest)
   }
 
-  class TestApplication :
-    Application(),
-    DataProvidersInjectorProvider,
-    PlatformParameterInitializationInjectorProvider {
+  class TestApplication : Application(), DataProvidersInjectorProvider {
     private val component: TestApplicationComponent by lazy {
       DaggerTestCoroutineDispatcherTest_TestApplicationComponent.builder()
         .setApplication(this)
@@ -262,7 +250,5 @@ class TestCoroutineDispatcherTest {
     }
 
     override fun getDataProvidersInjector(): DataProvidersInjector = component
-
-    override fun getPlatformParameterInitializationInjector() = component
   }
 }

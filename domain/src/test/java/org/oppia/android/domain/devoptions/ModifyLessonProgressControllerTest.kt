@@ -10,7 +10,6 @@ import dagger.Component
 import dagger.Module
 import dagger.Provides
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.oppia.android.app.model.ChapterPlayState
@@ -20,10 +19,8 @@ import org.oppia.android.app.model.ProfileId
 import org.oppia.android.domain.oppialogger.LogStorageModule
 import org.oppia.android.domain.oppialogger.LoggingIdentifierModule
 import org.oppia.android.domain.oppialogger.analytics.ApplicationLifecycleModule
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjector
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjectorProvider
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterTestModule
-import org.oppia.android.testing.OppiaTestRule
+import org.oppia.android.domain.platformparameter.PlatformParameterModule
+import org.oppia.android.domain.platformparameter.PlatformParameterSingletonModule
 import org.oppia.android.testing.TestLogReportingModule
 import org.oppia.android.testing.data.DataProviderTestMonitor
 import org.oppia.android.testing.environment.TestEnvironmentConfig
@@ -74,9 +71,6 @@ class ModifyLessonProgressControllerTest {
     private const val FRACTIONS_EXPLORATION_ID_0 = "umPkwp0L1M0-"
     private const val FRACTIONS_EXPLORATION_ID_1 = "MjZzEVOG47_1"
   }
-
-  @get:Rule
-  val oppiaTestRule = OppiaTestRule()
 
   @Inject lateinit var storyProgressTestHelper: StoryProgressTestHelper
   @Inject lateinit var modifyLessonProgressController: ModifyLessonProgressController
@@ -444,7 +438,8 @@ class ModifyLessonProgressControllerTest {
       LogStorageModule::class,
       LoggingIdentifierModule::class,
       NetworkConnectionUtilDebugModule::class,
-      PlatformParameterTestModule::class,
+      PlatformParameterModule::class,
+      PlatformParameterSingletonModule::class,
       RobolectricModule::class,
       SyncStatusModule::class,
       TestDispatcherModule::class,
@@ -452,9 +447,7 @@ class ModifyLessonProgressControllerTest {
       TestModule::class
     ]
   )
-  interface TestApplicationComponent :
-    DataProvidersInjector,
-    PlatformParameterInitializationInjector {
+  interface TestApplicationComponent : DataProvidersInjector {
     @Component.Builder
     interface Builder {
       @BindsInstance
@@ -466,10 +459,7 @@ class ModifyLessonProgressControllerTest {
     fun inject(modifyLessonProgressControllerTest: ModifyLessonProgressControllerTest)
   }
 
-  class TestApplication :
-    Application(),
-    DataProvidersInjectorProvider,
-    PlatformParameterInitializationInjectorProvider {
+  class TestApplication : Application(), DataProvidersInjectorProvider {
     private val component: TestApplicationComponent by lazy {
       DaggerModifyLessonProgressControllerTest_TestApplicationComponent.builder()
         .setApplication(this)
@@ -481,7 +471,5 @@ class ModifyLessonProgressControllerTest {
     }
 
     override fun getDataProvidersInjector(): DataProvidersInjector = component
-
-    override fun getPlatformParameterInitializationInjector() = component
   }
 }

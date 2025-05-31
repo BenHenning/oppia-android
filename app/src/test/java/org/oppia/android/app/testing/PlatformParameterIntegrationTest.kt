@@ -3,14 +3,17 @@ package org.oppia.android.app.testing
 import android.app.Application
 import android.content.Context
 import androidx.appcompat.app.AppCompatActivity
+import androidx.test.core.app.ActivityScenario.launch
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.work.Configuration
 import androidx.work.Data
 import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.impl.utils.SynchronousExecutor
 import androidx.work.testing.WorkManagerTestInitHelper
+import com.google.common.truth.Truth.assertThat
 import dagger.Component
 import org.junit.After
 import org.junit.Before
@@ -28,6 +31,7 @@ import org.oppia.android.app.application.ApplicationStartupListenerModule
 import org.oppia.android.app.application.testing.TestingBuildFlavorModule
 import org.oppia.android.app.devoptions.DeveloperOptionsModule
 import org.oppia.android.app.devoptions.DeveloperOptionsStarterModule
+import org.oppia.android.app.model.PlatformParameter
 import org.oppia.android.app.player.state.itemviewmodel.SplitScreenInteractionModule
 import org.oppia.android.app.shim.ViewBindingShimModule
 import org.oppia.android.app.testing.activity.TestActivity
@@ -36,6 +40,7 @@ import org.oppia.android.data.backends.gae.RetrofitModule
 import org.oppia.android.data.backends.gae.RetrofitServiceModule
 import org.oppia.android.data.backends.gae.testing.NetworkConfigTestModule
 import org.oppia.android.data.backends.gae.testing.PlatformParameterServiceTestOrchestrator
+import org.oppia.android.data.backends.gae.testing.PlatformParameterServiceTestOrchestrator.Companion.REMOTE_PLATFORM_PARAMETERS_WITH_UNSUPPORTED_TYPE
 import org.oppia.android.domain.classify.InteractionsModule
 import org.oppia.android.domain.classify.rules.algebraicexpressioninput.AlgebraicExpressionInputModule
 import org.oppia.android.domain.classify.rules.continueinteraction.ContinueModule
@@ -62,14 +67,12 @@ import org.oppia.android.domain.oppialogger.analytics.CpuPerformanceSnapshotterM
 import org.oppia.android.domain.oppialogger.logscheduler.MetricLogSchedulerModule
 import org.oppia.android.domain.oppialogger.loguploader.LogReportWorkerModule
 import org.oppia.android.domain.platformparameter.PlatformParameterController
+import org.oppia.android.domain.platformparameter.PlatformParameterModule
+import org.oppia.android.domain.platformparameter.PlatformParameterSingletonModule
 import org.oppia.android.domain.platformparameter.syncup.PlatformParameterSyncUpWorker
 import org.oppia.android.domain.platformparameter.syncup.PlatformParameterSyncUpWorkerFactory
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjector
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjectorProvider
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterTestModule
 import org.oppia.android.domain.question.QuestionModule
 import org.oppia.android.domain.workmanager.WorkManagerConfigurationModule
-import org.oppia.android.testing.OppiaTestRule
 import org.oppia.android.testing.TestLogReportingModule
 import org.oppia.android.testing.firebase.TestAuthenticationModule
 import org.oppia.android.testing.junit.InitializeDefaultLocaleRule
@@ -90,8 +93,12 @@ import org.oppia.android.util.networking.NetworkConnectionUtilDebugModule
 import org.oppia.android.util.parser.html.HtmlParserEntityTypeModule
 import org.oppia.android.util.parser.image.GlideImageLoaderModule
 import org.oppia.android.util.parser.image.ImageParsingModule
+import org.oppia.android.util.platformparameter.SPLASH_SCREEN_WELCOME_MSG
+import org.oppia.android.util.platformparameter.SPLASH_SCREEN_WELCOME_MSG_DEFAULT_VALUE
+import org.oppia.android.util.platformparameter.SPLASH_SCREEN_WELCOME_MSG_SERVER_VALUE
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.LooperMode
+import org.robolectric.shadows.ShadowToast
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -101,7 +108,6 @@ import javax.inject.Singleton
 @LooperMode(LooperMode.Mode.PAUSED)
 @Config(application = PlatformParameterIntegrationTest.TestApplication::class)
 class PlatformParameterIntegrationTest {
-  @get:Rule val oppiaTestRule = OppiaTestRule()
   @get:Rule val initializeDefaultLocaleRule = InitializeDefaultLocaleRule()
 
   @Inject lateinit var context: Context
@@ -109,6 +115,24 @@ class PlatformParameterIntegrationTest {
   @Inject lateinit var platformParameterController: PlatformParameterController
   @Inject lateinit var platformParameterSyncUpWorkerFactory: PlatformParameterSyncUpWorkerFactory
   @Inject lateinit var serviceOrchestrator: PlatformParameterServiceTestOrchestrator
+
+  private val mockPlatformParameterListWithToastEnabled by lazy {
+    val mockSplashScreenWelcomeMsgParam = PlatformParameter.newBuilder()
+      .setName(SPLASH_SCREEN_WELCOME_MSG)
+      .setBoolean(SPLASH_SCREEN_WELCOME_MSG_SERVER_VALUE)
+      .build()
+
+    listOf<PlatformParameter>(mockSplashScreenWelcomeMsgParam)
+  }
+
+  private val mockPlatformParameterListWithToastDisabled by lazy {
+    val mockSplashScreenWelcomeMsgParam = PlatformParameter.newBuilder()
+      .setName(SPLASH_SCREEN_WELCOME_MSG)
+      .setBoolean(SPLASH_SCREEN_WELCOME_MSG_DEFAULT_VALUE)
+      .build()
+
+    listOf<PlatformParameter>(mockSplashScreenWelcomeMsgParam)
+  }
 
   @Before
   fun setUp() {
@@ -128,119 +152,103 @@ class PlatformParameterIntegrationTest {
   }
 
   @Test
-  fun testNothingYet() {
-    TODO("Finish fixing the tests here.")
+  fun testIntegration_readEmptyDatabase_checkWelcomeMsgIsInvisibleByDefault() {
+    launch(SplashTestActivity::class.java).use { scenario ->
+      // Fetch the latest platform parameter from cache store after execution of work request to
+      // imitate the loading process at the start of splash test activity.
+      scenario.onActivity { activity ->
+        activity.splashTestActivityPresenter.loadPlatformParameters()
+      }
+      testCoroutineDispatchers.runCurrent()
+
+      assertThat(ShadowToast.getLatestToast()).isNull()
+    }
   }
 
-  // @Test
-  // fun testIntegration_readEmptyDatabase_checkWelcomeMsgIsInvisibleByDefault() {
-  //   launch(SplashTestActivity::class.java).use { scenario ->
-  //     // Fetch the latest platform parameter from cache store after execution of work request to
-  //     // imitate the loading process at the start of splash test activity.
-  //     scenario.onActivity { activity ->
-  //       activity.splashTestActivityPresenter.loadPlatformParameters()
-  //     }
-  //     testCoroutineDispatchers.runCurrent()
+  @Test
+  fun testIntegration_updateEmptyDatabase_readDatabase_checkWelcomeMsgIsVisible() {
+    platformParameterController.updatePlatformParameterDatabase(
+      mockPlatformParameterListWithToastEnabled
+    )
+    testCoroutineDispatchers.runCurrent()
 
-  //     assertThat(ShadowToast.getLatestToast()).isNull()
-  //   }
-  // }
+    launch(SplashTestActivity::class.java).use { scenario ->
+      // Fetch the latest platform parameter from cache store after execution of work request to
+      // imitate the loading process at the start of splash test activity.
+      scenario.onActivity { activity ->
+        activity.splashTestActivityPresenter.loadPlatformParameters()
+      }
+      testCoroutineDispatchers.runCurrent()
 
-  // @Test
-  // fun testIntegration_updateEmptyDatabase_readDatabase_checkWelcomeMsgIsVisible() {
-  //   platformParameterController.updatePlatformParameterDatabase(
-  //     mockPlatformParameterListWithToastEnabled
-  //   )
-  //   testCoroutineDispatchers.runCurrent()
+      assertThat(ShadowToast.getLatestToast()).isNotNull()
+      assertThat(ShadowToast.getTextOfLatestToast()).isEqualTo(SplashTestActivity.WELCOME_MSG)
+    }
+  }
 
-  //   launch(SplashTestActivity::class.java).use { scenario ->
-  //     // Fetch the latest platform parameter from cache store after execution of work request to
-  //     // imitate the loading process at the start of splash test activity.
-  //     scenario.onActivity { activity ->
-  //       activity.splashTestActivityPresenter.loadPlatformParameters()
-  //     }
-  //     testCoroutineDispatchers.runCurrent()
+  @Test
+  fun testIntegration_executeSyncUpWorkerCorrectly_readDatabase_checkWelcomeMsgIsVisible() {
+    serviceOrchestrator.setNextResponseAsSuccess(
+      parameterValues = mapOf(SPLASH_SCREEN_WELCOME_MSG to SPLASH_SCREEN_WELCOME_MSG_SERVER_VALUE)
+    )
 
-  //     assertThat(ShadowToast.getLatestToast()).isNotNull()
-  //     assertThat(ShadowToast.getTextOfLatestToast()).isEqualTo(SplashTestActivity.WELCOME_MSG)
-  //   }
-  // }
+    launch(SplashTestActivity::class.java).use { scenario ->
+      // Set up versionName to get correct network response from mock platform parameter service.
+      platformParameterController.updatePlatformParameterDatabase(
+        mockPlatformParameterListWithToastDisabled
+      )
 
-  // @Test
-  // fun testIntegration_executeSyncUpWorkerCorrectly_readDatabase_checkWelcomeMsgIsVisible() {
-//    serviceOrchestrator.setNextResponseAsSuccess(
-//      parameterValues = mapOf(SPLASH_SCREEN_WELCOME_MSG to SPLASH_SCREEN_WELCOME_MSG_SERVER_VALUE)
-//    )
-//
-//    launch(SplashTestActivity::class.java).use { scenario ->
-//      // Set up versionName to get correct network response from mock platform parameter service.
-//      platformParameterController.updatePlatformParameterDatabase(
-//        mockPlatformParameterListWithToastDisabled
-//      )
+      val workManager = WorkManager.getInstance(context)
+      val requestId = setUpAndEnqueueSyncUpWorkerRequest(workManager)
+      testCoroutineDispatchers.runCurrent()
 
-  //   launch(SplashTestActivity::class.java).use { scenario ->
-  //     // Set up versionName to get correct network response from mock platform parameter service.
-  //     setUpApplicationForVersionName(MockPlatformParameterService.appVersionForCorrectResponse)
-  //     platformParameterController.updatePlatformParameterDatabase(
-  //       mockPlatformParameterListWithToastDisabled
-  //     )
+      val workInfo = workManager.getWorkInfoById(requestId)
+      // Check the work request succeeded which means the local database was updated with new values.
+      assertThat(workInfo.get().state).isEqualTo(WorkInfo.State.SUCCEEDED)
 
-  //     val workManager = WorkManager.getInstance(context)
-  //     val requestId = setUpAndEnqueueSyncUpWorkerRequest(workManager)
-  //     testCoroutineDispatchers.runCurrent()
+      // Fetch the latest platform parameter from cache store after execution of work request to
+      // imitate the loading process at the start of splash test activity.
+      scenario.onActivity { activity ->
+        activity.splashTestActivityPresenter.loadPlatformParameters()
+      }
+      testCoroutineDispatchers.runCurrent()
 
-  //     val workInfo = workManager.getWorkInfoById(requestId)
-  //     // Check the work request succeeded which means the local database was updated with new values.
-  //     assertThat(workInfo.get().state).isEqualTo(WorkInfo.State.SUCCEEDED)
+      // As the local database was updated correctly the app will use the server values, and the
+      // server value for the splash screen welcome msg param is true.
+      assertThat(ShadowToast.getLatestToast()).isNotNull()
+      assertThat(ShadowToast.getTextOfLatestToast()).isEqualTo(SplashTestActivity.WELCOME_MSG)
+    }
+  }
 
-  //     // Fetch the latest platform parameter from cache store after execution of work request to
-  //     // imitate the loading process at the start of splash test activity.
-  //     scenario.onActivity { activity ->
-  //       activity.splashTestActivityPresenter.loadPlatformParameters()
-  //     }
-  //     testCoroutineDispatchers.runCurrent()
+  @Test
+  fun testIntegration_executeSyncUpWorkerIncorrectly_readDatabase_checkWelcomeMsgIsInvisible() {
+    serviceOrchestrator.setNextResponseAsSuccess(REMOTE_PLATFORM_PARAMETERS_WITH_UNSUPPORTED_TYPE)
 
-  //     // As the local database was updated correctly the app will use the server values, and the
-  //     // server value for the splash screen welcome msg param is true.
-  //     assertThat(ShadowToast.getLatestToast()).isNotNull()
-  //     assertThat(ShadowToast.getTextOfLatestToast()).isEqualTo(SplashTestActivity.WELCOME_MSG)
-  //   }
-  // }
+    launch(SplashTestActivity::class.java).use { scenario ->
+      platformParameterController.updatePlatformParameterDatabase(
+        mockPlatformParameterListWithToastDisabled
+      )
 
-  // @Test
-  // fun testIntegration_executeSyncUpWorkerIncorrectly_readDatabase_checkWelcomeMsgIsInvisible() {    serviceOrchestrator.setNextResponseAsSuccess(REMOTE_PLATFORM_PARAMETERS_WITH_UNSUPPORTED_TYPE)
-//    launch(SplashTestActivity::class.java).use { scenario ->
-//      platformParameterController.updatePlatformParameterDatabase(
-//        mockPlatformParameterListWithToastDisabled
-//      )
-  //   launch(SplashTestActivity::class.java).use { scenario ->
-  //     // Set up versionName to get incorrect network response from mock platform parameter service.
-  //     setUpApplicationForVersionName(MockPlatformParameterService.appVersionForWrongResponse)
-  //     platformParameterController.updatePlatformParameterDatabase(
-  //       mockPlatformParameterListWithToastDisabled
-  //     )
+      val workManager = WorkManager.getInstance(context)
+      val requestId = setUpAndEnqueueSyncUpWorkerRequest(workManager)
+      testCoroutineDispatchers.runCurrent()
 
-  //     val workManager = WorkManager.getInstance(context)
-  //     val requestId = setUpAndEnqueueSyncUpWorkerRequest(workManager)
-  //     testCoroutineDispatchers.runCurrent()
+      val workInfo = workManager.getWorkInfoById(requestId)
+      // Check the work request fails because of incorrect network response. This means that the
+      // local database is not updated with new values.
+      assertThat(workInfo.get().state).isEqualTo(WorkInfo.State.FAILED)
 
-  //     val workInfo = workManager.getWorkInfoById(requestId)
-  //     // Check the work request fails because of incorrect network response. This means that the
-  //     // local database is not updated with new values.
-  //     assertThat(workInfo.get().state).isEqualTo(WorkInfo.State.FAILED)
+      // Fetch the latest platform parameter from cache store after execution of work request to
+      // imitate the loading process at the start of splash test activity.
+      scenario.onActivity { activity ->
+        activity.splashTestActivityPresenter.loadPlatformParameters()
+      }
+      testCoroutineDispatchers.runCurrent()
 
-  //     // Fetch the latest platform parameter from cache store after execution of work request to
-  //     // imitate the loading process at the start of splash test activity.
-  //     scenario.onActivity { activity ->
-  //       activity.splashTestActivityPresenter.loadPlatformParameters()
-  //     }
-  //     testCoroutineDispatchers.runCurrent()
-
-  //     // As the local database was not updated due to work request failure the app will use default
-  //     // values, and the default value for the splash screen welcome msg param is false.
-  //     assertThat(ShadowToast.getLatestToast()).isNull()
-  //   }
-  // }
+      // As the local database was not updated due to work request failure the app will use default
+      // values, and the default value for the splash screen welcome msg param is false.
+      assertThat(ShadowToast.getLatestToast()).isNull()
+    }
+  }
 
   private fun setUpAndEnqueueSyncUpWorkerRequest(workManager: WorkManager): UUID {
     val inputData = Data.Builder().putString(
@@ -308,7 +316,8 @@ class PlatformParameterIntegrationTest {
       NumberWithUnitsRuleModule::class,
       NumericExpressionInputModule::class,
       NumericInputRuleModule::class,
-      PlatformParameterTestModule::class,
+      PlatformParameterModule::class,
+      PlatformParameterSingletonModule::class,
       QuestionModule::class,
       RatioInputModule::class,
       RetrofitModule::class,
@@ -325,9 +334,7 @@ class PlatformParameterIntegrationTest {
       WorkManagerConfigurationModule::class
     ]
   )
-  interface TestApplicationComponent :
-    ApplicationComponent,
-    PlatformParameterInitializationInjector {
+  interface TestApplicationComponent : ApplicationComponent {
     @Component.Builder
     interface Builder : ApplicationComponent.Builder {
       override fun build(): TestApplicationComponent
@@ -336,11 +343,7 @@ class PlatformParameterIntegrationTest {
     fun inject(platformParameterIntegrationTest: PlatformParameterIntegrationTest)
   }
 
-  class TestApplication :
-    Application(),
-    ActivityComponentFactory,
-    ApplicationInjectorProvider,
-    PlatformParameterInitializationInjectorProvider {
+  class TestApplication : Application(), ActivityComponentFactory, ApplicationInjectorProvider {
     private val component: TestApplicationComponent by lazy {
       DaggerPlatformParameterIntegrationTest_TestApplicationComponent.builder()
         .setApplication(this)
@@ -356,7 +359,5 @@ class PlatformParameterIntegrationTest {
     }
 
     override fun getApplicationInjector(): ApplicationInjector = component
-
-    override fun getPlatformParameterInitializationInjector() = component
   }
 }

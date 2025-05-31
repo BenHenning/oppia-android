@@ -11,12 +11,8 @@ import dagger.Component
 import dagger.Module
 import dagger.Provides
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjector
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjectorProvider
-import org.oppia.android.testing.OppiaTestRule
 import org.oppia.android.testing.TestLogReportingModule
 import org.oppia.android.testing.robolectric.RobolectricModule
 import org.oppia.android.testing.threading.TestDispatcherModule
@@ -34,9 +30,6 @@ import javax.inject.Singleton
 @LooperMode(LooperMode.Mode.PAUSED)
 @Config(application = TestActivityRecreatorTest.TestApplication::class)
 class TestActivityRecreatorTest {
-  @get:Rule
-  val oppiaTestRule = OppiaTestRule()
-
   @Inject
   lateinit var testActivityRecreator: TestActivityRecreator
 
@@ -96,9 +89,7 @@ class TestActivityRecreatorTest {
       TestModule::class
     ]
   )
-  interface TestApplicationComponent :
-    DataProvidersInjector,
-    PlatformParameterInitializationInjector {
+  interface TestApplicationComponent : DataProvidersInjector {
     @Component.Builder
     interface Builder {
       @BindsInstance
@@ -110,10 +101,7 @@ class TestActivityRecreatorTest {
     fun inject(testActivityRecreatorTest: TestActivityRecreatorTest)
   }
 
-  class TestApplication :
-    Application(),
-    DataProvidersInjectorProvider,
-    PlatformParameterInitializationInjectorProvider {
+  class TestApplication : Application(), DataProvidersInjectorProvider {
     private val component: TestApplicationComponent by lazy {
       DaggerTestActivityRecreatorTest_TestApplicationComponent.builder()
         .setApplication(this)
@@ -125,7 +113,5 @@ class TestActivityRecreatorTest {
     }
 
     override fun getDataProvidersInjector(): DataProvidersInjector = component
-
-    override fun getPlatformParameterInitializationInjector() = component
   }
 }

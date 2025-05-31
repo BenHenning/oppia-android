@@ -30,7 +30,6 @@ import org.oppia.android.app.model.EventLog
 import org.oppia.android.app.model.EventLog.Context.ActivityContextCase.COMPLETE_APP_ONBOARDING
 import org.oppia.android.app.model.EventLog.Context.ActivityContextCase.END_PROFILE_ONBOARDING_EVENT
 import org.oppia.android.app.model.EventLog.Context.ActivityContextCase.OPEN_HOME
-import org.oppia.android.app.model.FeatureFlagId.ONBOARDING_FLOW_V2
 import org.oppia.android.app.model.ProfileId
 import org.oppia.android.app.model.ProfileType
 import org.oppia.android.app.player.state.itemviewmodel.SplitScreenInteractionModule
@@ -66,19 +65,15 @@ import org.oppia.android.domain.oppialogger.analytics.ApplicationLifecycleModule
 import org.oppia.android.domain.oppialogger.analytics.CpuPerformanceSnapshotterModule
 import org.oppia.android.domain.oppialogger.logscheduler.MetricLogSchedulerModule
 import org.oppia.android.domain.oppialogger.loguploader.LogReportWorkerModule
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjector
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjectorProvider
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterTestModule
+import org.oppia.android.domain.platformparameter.PlatformParameterSingletonModule
 import org.oppia.android.domain.question.QuestionModule
 import org.oppia.android.domain.workmanager.WorkManagerConfigurationModule
-import org.oppia.android.testing.DisableFeatureFlag
-import org.oppia.android.testing.EnableFeatureFlag
 import org.oppia.android.testing.FakeAnalyticsEventLogger
-import org.oppia.android.testing.OppiaTestRule
 import org.oppia.android.testing.TestLogReportingModule
 import org.oppia.android.testing.data.DataProviderTestMonitor
 import org.oppia.android.testing.firebase.TestAuthenticationModule
 import org.oppia.android.testing.junit.InitializeDefaultLocaleRule
+import org.oppia.android.testing.platformparameter.TestPlatformParameterModule
 import org.oppia.android.testing.profile.ProfileTestHelper
 import org.oppia.android.testing.robolectric.RobolectricModule
 import org.oppia.android.testing.threading.TestCoroutineDispatchers
@@ -110,9 +105,6 @@ import javax.inject.Singleton
 )
 class HomeActivityLocalTest {
   @get:Rule
-  val oppiaTestRule = OppiaTestRule()
-
-  @get:Rule
   val initializeDefaultLocaleRule = InitializeDefaultLocaleRule()
 
   @Inject
@@ -141,13 +133,13 @@ class HomeActivityLocalTest {
 
   @After
   fun tearDown() {
+    TestPlatformParameterModule.reset()
     Intents.release()
   }
 
   @Test
-  @DisableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testHomeActivity_onLaunch_logsOpenHomeEvent() {
-    setUpTestApplicationComponent()
+    setUpTestWithOnboardingV2Enabled(false)
 
     launch<HomeActivity>(createHomeActivityIntent(profileId)).use {
       testCoroutineDispatchers.runCurrent()
@@ -159,9 +151,8 @@ class HomeActivityLocalTest {
   }
 
   @Test
-  @EnableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testActivity_onboardingV2_soleProfile_onInitialLaunch_logsCompleteAppOnboardingEvent() {
-    setUpTestApplicationComponent()
+    setUpTestWithOnboardingV2Enabled(true)
     profileTestHelper.addOnlyAdminProfileWithoutPin()
     profileTestHelper.updateProfileType(
       profileId = profileId,
@@ -178,9 +169,8 @@ class HomeActivityLocalTest {
   }
 
   @Test
-  @EnableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testActivity_onboardingV2_supervisorProfile_onInitialLaunch_logsCompleteAppOnboardingEvent() {
-    setUpTestApplicationComponent()
+    setUpTestWithOnboardingV2Enabled(true)
     profileTestHelper.addOnlyAdminProfileWithoutPin()
     profileTestHelper.updateProfileType(
       profileId = profileId,
@@ -197,9 +187,8 @@ class HomeActivityLocalTest {
   }
 
   @Test
-  @EnableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testActivity_onboardingV2_nonAdminProfile_onInitialLaunch_doesNotLogAppOnboardingEvent() {
-    setUpTestApplicationComponent()
+    setUpTestWithOnboardingV2Enabled(true)
     profileTestHelper.addOnlyAdminProfile()
     profileTestHelper.addMoreProfiles(1)
     val profileId1 = ProfileId.newBuilder().setInternalId(1).build()
@@ -221,9 +210,8 @@ class HomeActivityLocalTest {
   }
 
   @Test
-  @DisableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testActivity_onboardingV2_adminProfile_onSubsequentLaunch_doesNotLogAppOnboardingEvent() {
-    oppiaTestRule.executeInPreviousAppInstance<TestApplicationComponent> { testComponent ->
+    executeInPreviousAppInstance { testComponent ->
       testComponent.getProfileTestHelper().updateProfileType(profileId, ProfileType.SOLE_LEARNER)
       testComponent.getProfileTestHelper().markProfileOnboardingStarted(profileId)
       testComponent.getProfileTestHelper().markProfileOnboardingEnded(profileId)
@@ -231,7 +219,7 @@ class HomeActivityLocalTest {
       testComponent.getTestCoroutineDispatchers().runCurrent()
     }
 
-    setUpTestApplicationComponent()
+    setUpTestWithOnboardingV2Enabled(false)
     launch<HomeActivity>(createHomeActivityIntent(profileId)).use {
       testCoroutineDispatchers.runCurrent()
       val eventCount = fakeAnalyticsEventLogger.getEventListCount()
@@ -244,14 +232,13 @@ class HomeActivityLocalTest {
   }
 
   @Test
-  @DisableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testHomeActivity_onSubsequentLaunch_doesNotLogCompletedAppOnboardingEvent() {
-    oppiaTestRule.executeInPreviousAppInstance<TestApplicationComponent> { testComponent ->
+    executeInPreviousAppInstance { testComponent ->
       testComponent.getAppStartupStateController().markOnboardingFlowCompleted()
       testComponent.getTestCoroutineDispatchers().runCurrent()
     }
 
-    setUpTestApplicationComponent()
+    setUpTestWithOnboardingV2Enabled(false)
     launch<HomeActivity>(createHomeActivityIntent(profileId)).use {
       testCoroutineDispatchers.runCurrent()
       val eventCount = fakeAnalyticsEventLogger.getEventListCount()
@@ -264,9 +251,8 @@ class HomeActivityLocalTest {
   }
 
   @Test
-  @EnableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testHomeActivity_onboardingV2Enabled_onInitialLaunch_logsEndProfileOnboardingEvent() {
-    setUpTestApplicationComponent()
+    setUpTestWithOnboardingV2Enabled(true)
     profileTestHelper.addOnlyAdminProfileWithoutPin()
     launch<HomeActivity>(createHomeActivityIntent(profileId)).use {
       testCoroutineDispatchers.runCurrent()
@@ -279,21 +265,46 @@ class HomeActivityLocalTest {
   }
 
   @Test
-  @EnableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testHomeActivity_onboardingV2_revisitApp_doesNotLogEndProfileOnboardingEvent() {
-    oppiaTestRule.executeInPreviousAppInstance<TestApplicationComponent> { testComponent ->
+    executeInPreviousAppInstance { testComponent ->
       testComponent.getAppStartupStateController().markOnboardingFlowCompleted()
       testComponent.getProfileTestHelper().markProfileOnboardingEnded(profileId)
       testComponent.getTestCoroutineDispatchers().runCurrent()
     }
 
-    setUpTestApplicationComponent()
+    setUpTestWithOnboardingV2Enabled(true)
     launch<HomeActivity>(createHomeActivityIntent(profileId)).use {
       testCoroutineDispatchers.runCurrent()
 
       val event = fakeAnalyticsEventLogger.getMostRecentEvent()
       assertThat(event.context.activityContextCase).isEqualTo(OPEN_HOME)
     }
+  }
+
+  private fun setUpTestWithOnboardingV2Enabled(enableOnboardingFlowV2: Boolean) {
+    TestPlatformParameterModule.forceEnableOnboardingFlowV2(enableOnboardingFlowV2)
+    setUpTestApplicationComponent()
+  }
+
+  /**
+   * Creates a separate test application component and executes the specified block. This should be
+   * called before [setUpTestApplicationComponent] to avoid undefined behavior in production code.
+   * This can be used to simulate arranging state in a "prior" run of the app.
+   *
+   * Note that only dependencies fetched from the specified [TestApplicationComponent] should be
+   * used, not any class-level injected dependencies.
+   */
+  private fun executeInPreviousAppInstance(block: (TestApplicationComponent) -> Unit) {
+    val testApplication = TestApplication()
+    // The true application is hooked as a base context. This is to make sure the new application
+    // can behave like a real Android application class (per Robolectric) without having a shared
+    // Dagger dependency graph with the application under test.
+    testApplication.attachBaseContext(ApplicationProvider.getApplicationContext())
+    block(
+      DaggerHomeActivityLocalTest_TestApplicationComponent.builder()
+        .setApplication(testApplication)
+        .build() as TestApplicationComponent
+    )
   }
 
   private fun createHomeActivityIntent(profileId: ProfileId): Intent {
@@ -352,7 +363,7 @@ class HomeActivityLocalTest {
       NumberWithUnitsRuleModule::class,
       NumericExpressionInputModule::class,
       NumericInputRuleModule::class,
-      PlatformParameterTestModule::class,
+      PlatformParameterSingletonModule::class,
       QuestionModule::class,
       RatioInputModule::class,
       RetrofitModule::class,
@@ -363,15 +374,14 @@ class HomeActivityLocalTest {
       TestAuthenticationModule::class,
       TestDispatcherModule::class,
       TestLogReportingModule::class,
+      TestPlatformParameterModule::class,
       TestingBuildFlavorModule::class,
       TextInputRuleModule::class,
       ViewBindingShimModule::class,
       WorkManagerConfigurationModule::class
     ]
   )
-  interface TestApplicationComponent :
-    ApplicationComponent,
-    PlatformParameterInitializationInjector {
+  interface TestApplicationComponent : ApplicationComponent {
     @Component.Builder
     interface Builder : ApplicationComponent.Builder {
       override fun build(): TestApplicationComponent
@@ -381,14 +391,12 @@ class HomeActivityLocalTest {
 
     fun getAppStartupStateController(): AppStartupStateController
 
+    fun getTestCoroutineDispatchers(): TestCoroutineDispatchers
+
     fun getProfileTestHelper(): ProfileTestHelper
   }
 
-  class TestApplication :
-    Application(),
-    ActivityComponentFactory,
-    ApplicationInjectorProvider,
-    PlatformParameterInitializationInjectorProvider {
+  class TestApplication : Application(), ActivityComponentFactory, ApplicationInjectorProvider {
     private val component: TestApplicationComponent by lazy {
       DaggerHomeActivityLocalTest_TestApplicationComponent.builder()
         .setApplication(this)
@@ -408,7 +416,5 @@ class HomeActivityLocalTest {
     }
 
     override fun getApplicationInjector(): ApplicationInjector = component
-
-    override fun getPlatformParameterInitializationInjector() = component
   }
 }

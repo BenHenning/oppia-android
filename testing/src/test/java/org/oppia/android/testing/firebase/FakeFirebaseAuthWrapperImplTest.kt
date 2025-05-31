@@ -10,14 +10,10 @@ import dagger.Component
 import dagger.Module
 import dagger.Provides
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.oppia.android.domain.auth.FirebaseUserWrapper
 import org.oppia.android.domain.oppialogger.analytics.ApplicationLifecycleModule
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjector
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjectorProvider
-import org.oppia.android.testing.OppiaTestRule
 import org.oppia.android.testing.TestLogReportingModule
 import org.oppia.android.testing.firebase.FakeFirebaseAuthWrapperImpl.FakeAuthState
 import org.oppia.android.testing.robolectric.RobolectricModule
@@ -37,9 +33,6 @@ import javax.inject.Singleton
 @LooperMode(LooperMode.Mode.PAUSED)
 @Config(application = FakeFirebaseAuthWrapperImplTest.TestApplication::class)
 class FakeFirebaseAuthWrapperImplTest {
-  @get:Rule
-  val oppiaTestRule = OppiaTestRule()
-
   @Inject
   lateinit var fakeFirebaseAuthWrapperImpl: FakeFirebaseAuthWrapperImpl
 
@@ -107,9 +100,7 @@ class FakeFirebaseAuthWrapperImplTest {
       TestModule::class
     ]
   )
-  interface TestApplicationComponent :
-    DataProvidersInjector,
-    PlatformParameterInitializationInjector {
+  interface TestApplicationComponent : DataProvidersInjector {
     @Component.Builder
     interface Builder {
       @BindsInstance
@@ -121,10 +112,7 @@ class FakeFirebaseAuthWrapperImplTest {
     fun inject(test: FakeFirebaseAuthWrapperImplTest)
   }
 
-  class TestApplication :
-    Application(),
-    DataProvidersInjectorProvider,
-    PlatformParameterInitializationInjectorProvider {
+  class TestApplication : Application(), DataProvidersInjectorProvider {
     private val component: TestApplicationComponent by lazy {
       DaggerFakeFirebaseAuthWrapperImplTest_TestApplicationComponent.builder()
         .setApplication(this)
@@ -136,7 +124,5 @@ class FakeFirebaseAuthWrapperImplTest {
     }
 
     override fun getDataProvidersInjector(): DataProvidersInjector = component
-
-    override fun getPlatformParameterInitializationInjector() = component
   }
 }

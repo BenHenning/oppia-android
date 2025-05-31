@@ -10,12 +10,10 @@ import dagger.BindsInstance
 import dagger.Component
 import dagger.Module
 import dagger.Provides
-import org.junit.Before
-import org.junit.Rule
+import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.Mock
-import org.oppia.android.app.model.FeatureFlagId.PERFORMANCE_METRICS_COLLECTION
 import org.oppia.android.app.model.OppiaMetricLog
 import org.oppia.android.app.model.OppiaMetricLog.LoggableMetric.LoggableMetricTypeCase.APK_SIZE_METRIC
 import org.oppia.android.app.model.OppiaMetricLog.LoggableMetric.LoggableMetricTypeCase.CPU_USAGE_METRIC
@@ -28,26 +26,19 @@ import org.oppia.android.app.model.OppiaMetricLog.Priority.LOW_PRIORITY
 import org.oppia.android.app.model.OppiaMetricLog.Priority.MEDIUM_PRIORITY
 import org.oppia.android.app.model.ScreenName.HOME_ACTIVITY
 import org.oppia.android.app.model.ScreenName.SCREEN_NAME_UNSPECIFIED
-import org.oppia.android.data.backends.gae.RetrofitModule
-import org.oppia.android.data.backends.gae.RetrofitServiceModule
-import org.oppia.android.data.backends.gae.testing.NetworkConfigTestModule
 import org.oppia.android.domain.oppialogger.EventLogStorageCacheSize
 import org.oppia.android.domain.oppialogger.LoggingIdentifierModule
 import org.oppia.android.domain.oppialogger.PerformanceMetricsLogStorageCacheSize
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjector
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjectorProvider
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterTestModule
-import org.oppia.android.testing.EnableFeatureFlag
+import org.oppia.android.domain.platformparameter.PlatformParameterSingletonModule
 import org.oppia.android.testing.FakePerformanceMetricAssessor
 import org.oppia.android.testing.FakePerformanceMetricsEventLogger
-import org.oppia.android.testing.OppiaTestRule
 import org.oppia.android.testing.TestLogReportingModule
 import org.oppia.android.testing.logging.SyncStatusTestModule
+import org.oppia.android.testing.platformparameter.TestPlatformParameterModule
 import org.oppia.android.testing.robolectric.RobolectricModule
 import org.oppia.android.testing.threading.TestDispatcherModule
 import org.oppia.android.testing.time.FakeOppiaClock
 import org.oppia.android.testing.time.FakeOppiaClockModule
-import org.oppia.android.util.caching.AssetModule
 import org.oppia.android.util.data.DataProvidersInjector
 import org.oppia.android.util.data.DataProvidersInjectorProvider
 import org.oppia.android.util.locale.LocaleProdModule
@@ -78,7 +69,6 @@ private const val TEST_STARTUP_LATENCY_IN_MILLISECONDS = 3000L
 @LooperMode(LooperMode.Mode.PAUSED)
 @Config(application = PerformanceMetricsLoggerTest.TestApplication::class)
 class PerformanceMetricsLoggerTest {
-  @get:Rule val oppiaTestRule = OppiaTestRule()
 
   @Inject
   lateinit var performanceMetricsLogger: PerformanceMetricsLogger
@@ -101,9 +91,9 @@ class PerformanceMetricsLoggerTest {
   private val testDeviceStorageTier = OppiaMetricLog.StorageTier.MEDIUM_STORAGE
   private val testDeviceMemoryTier = OppiaMetricLog.MemoryTier.MEDIUM_MEMORY_TIER
 
-  @Before
-  fun setUp() {
-    setUpApplicationInDefaultMode()
+  @After
+  fun tearDown() {
+    TestPlatformParameterModule.reset()
   }
 
   @Test
@@ -122,8 +112,8 @@ class PerformanceMetricsLoggerTest {
   }
 
   @Test
-  @EnableFeatureFlag(PERFORMANCE_METRICS_COLLECTION)
   fun testLogger_logApkSizePerformanceMetric_verifyLogsMetricCorrectly() {
+    setUpApplicationForPerformanceMetricsLogging()
     val apkSize = fakePerformanceMetricAssessor.getApkSize()
     val memoryTier = fakePerformanceMetricAssessor.getDeviceMemoryTier()
     val storageTier = fakePerformanceMetricAssessor.getDeviceStorageTier()
@@ -142,8 +132,8 @@ class PerformanceMetricsLoggerTest {
   }
 
   @Test
-  @EnableFeatureFlag(PERFORMANCE_METRICS_COLLECTION)
   fun testLogger_logStorageUsagePerformanceMetric_verifyLogsMetricCorrectly() {
+    setUpApplicationForPerformanceMetricsLogging()
     val memoryTier = fakePerformanceMetricAssessor.getDeviceMemoryTier()
     val storageTier = fakePerformanceMetricAssessor.getDeviceStorageTier()
     val isAppInForeground = performanceMetricsController.getIsAppInForeground()
@@ -164,8 +154,8 @@ class PerformanceMetricsLoggerTest {
   }
 
   @Test
-  @EnableFeatureFlag(PERFORMANCE_METRICS_COLLECTION)
   fun testLogger_logMemoryUsagePerformanceMetric_verifyLogsMetricCorrectly() {
+    setUpApplicationForPerformanceMetricsLogging()
     val memoryUsage = fakePerformanceMetricAssessor.getTotalPssUsed()
     val memoryTier = fakePerformanceMetricAssessor.getDeviceMemoryTier()
     val storageTier = fakePerformanceMetricAssessor.getDeviceStorageTier()
@@ -184,8 +174,8 @@ class PerformanceMetricsLoggerTest {
   }
 
   @Test
-  @EnableFeatureFlag(PERFORMANCE_METRICS_COLLECTION)
   fun testLogger_logStartupLatencyPerformanceMetric_verifyLogsMetricCorrectly() {
+    setUpApplicationForPerformanceMetricsLogging()
     val memoryTier = fakePerformanceMetricAssessor.getDeviceMemoryTier()
     val storageTier = fakePerformanceMetricAssessor.getDeviceStorageTier()
     val isAppInForeground = performanceMetricsController.getIsAppInForeground()
@@ -210,8 +200,8 @@ class PerformanceMetricsLoggerTest {
   }
 
   @Test
-  @EnableFeatureFlag(PERFORMANCE_METRICS_COLLECTION)
   fun testLogger_logCpuUsagePerformanceMetric_verifyLogsMetricCorrectly() {
+    setUpApplicationForPerformanceMetricsLogging()
     val memoryTier = fakePerformanceMetricAssessor.getDeviceMemoryTier()
     val storageTier = fakePerformanceMetricAssessor.getDeviceStorageTier()
     val isAppInForeground = performanceMetricsController.getIsAppInForeground()
@@ -232,8 +222,8 @@ class PerformanceMetricsLoggerTest {
   }
 
   @Test
-  @EnableFeatureFlag(PERFORMANCE_METRICS_COLLECTION)
   fun testLogger_logNetworkUsagePerformanceMetric_verifyLogsMetricCorrectly() {
+    setUpApplicationForPerformanceMetricsLogging()
     val bytesSent = fakePerformanceMetricAssessor.getTotalSentBytes()
     val bytesReceived = fakePerformanceMetricAssessor.getTotalReceivedBytes()
     val memoryTier = fakePerformanceMetricAssessor.getDeviceMemoryTier()
@@ -269,6 +259,14 @@ class PerformanceMetricsLoggerTest {
   }
 
   private fun setUpApplicationInDefaultMode() {
+    ApplicationProvider.getApplicationContext<TestApplication>().inject(this)
+    setUpFakePerformanceMetricsUtils()
+    fakeOppiaClock.setFakeTimeMode(FakeOppiaClock.FakeTimeMode.MODE_FIXED_FAKE_TIME)
+    fakeOppiaClock.setCurrentTimeMs(TEST_TIMESTAMP)
+  }
+
+  private fun setUpApplicationForPerformanceMetricsLogging() {
+    TestPlatformParameterModule.forceEnablePerformanceMetricsCollection(true)
     ApplicationProvider.getApplicationContext<TestApplication>().inject(this)
     setUpFakePerformanceMetricsUtils()
     fakeOppiaClock.setFakeTimeMode(FakeOppiaClock.FakeTimeMode.MODE_FIXED_FAKE_TIME)
@@ -336,26 +334,21 @@ class PerformanceMetricsLoggerTest {
   @Component(
     modules = [
       ApplicationLifecycleModule::class,
-      AssetModule::class,
       FakeOppiaClockModule::class,
       LocaleProdModule::class,
       LoggingIdentifierModule::class,
-      NetworkConfigTestModule::class,
       NetworkConnectionUtilDebugModule::class,
-      PlatformParameterTestModule::class,
-      RetrofitModule::class,
-      RetrofitServiceModule::class,
+      PlatformParameterSingletonModule::class,
       RobolectricModule::class,
       SyncStatusTestModule::class,
       TestDispatcherModule::class,
       TestLogReportingModule::class,
       TestLogStorageModule::class,
-      TestModule::class
+      TestModule::class,
+      TestPlatformParameterModule::class
     ]
   )
-  interface TestApplicationComponent :
-    DataProvidersInjector,
-    PlatformParameterInitializationInjector {
+  interface TestApplicationComponent : DataProvidersInjector {
     @Component.Builder
     interface Builder {
       @BindsInstance
@@ -366,10 +359,7 @@ class PerformanceMetricsLoggerTest {
     fun inject(performanceMetricsLoggerTest: PerformanceMetricsLoggerTest)
   }
 
-  class TestApplication :
-    Application(),
-    DataProvidersInjectorProvider,
-    PlatformParameterInitializationInjectorProvider {
+  class TestApplication : Application(), DataProvidersInjectorProvider {
     private val component: TestApplicationComponent by lazy {
       DaggerPerformanceMetricsLoggerTest_TestApplicationComponent.builder()
         .setApplication(this)
@@ -381,7 +371,5 @@ class PerformanceMetricsLoggerTest {
     }
 
     override fun getDataProvidersInjector(): DataProvidersInjector = component
-
-    override fun getPlatformParameterInitializationInjector() = component
   }
 }

@@ -14,13 +14,9 @@ import dagger.Component
 import dagger.Module
 import dagger.Provides
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.oppia.android.domain.oppialogger.LogStorageModule
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjector
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjectorProvider
-import org.oppia.android.testing.OppiaTestRule
 import org.oppia.android.testing.TestLogReportingModule
 import org.oppia.android.testing.assertThrows
 import org.oppia.android.testing.robolectric.RobolectricModule
@@ -53,9 +49,6 @@ private const val EVENING_TIMESTAMP = 1556061720000
 @LooperMode(LooperMode.Mode.PAUSED)
 @Config(application = FakeOppiaClockTest.TestApplication::class)
 class FakeOppiaClockTest {
-  @get:Rule
-  val oppiaTestRule = OppiaTestRule()
-
   @Inject
   lateinit var fakeOppiaClock: FakeOppiaClock
 
@@ -308,9 +301,7 @@ class FakeOppiaClockTest {
       TestModule::class
     ]
   )
-  interface TestApplicationComponent :
-    DataProvidersInjector,
-    PlatformParameterInitializationInjector {
+  interface TestApplicationComponent : DataProvidersInjector {
     @Component.Builder
     interface Builder {
       @BindsInstance
@@ -322,10 +313,7 @@ class FakeOppiaClockTest {
     fun inject(fakeOppiaClockTest: FakeOppiaClockTest)
   }
 
-  class TestApplication :
-    Application(),
-    DataProvidersInjectorProvider,
-    PlatformParameterInitializationInjectorProvider {
+  class TestApplication : Application(), DataProvidersInjectorProvider {
     private val component: TestApplicationComponent by lazy {
       DaggerFakeOppiaClockTest_TestApplicationComponent.builder()
         .setApplication(this)
@@ -337,7 +325,5 @@ class FakeOppiaClockTest {
     }
 
     override fun getDataProvidersInjector(): DataProvidersInjector = component
-
-    override fun getPlatformParameterInitializationInjector() = component
   }
 }

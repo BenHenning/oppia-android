@@ -34,7 +34,6 @@ import org.oppia.android.app.application.ApplicationStartupListenerModule
 import org.oppia.android.app.application.testing.TestingBuildFlavorModule
 import org.oppia.android.app.devoptions.DeveloperOptionsModule
 import org.oppia.android.app.devoptions.DeveloperOptionsStarterModule
-import org.oppia.android.app.model.FeatureFlagId.SPOTLIGHT_UI
 import org.oppia.android.app.model.Spotlight
 import org.oppia.android.app.player.state.itemviewmodel.SplitScreenInteractionModule
 import org.oppia.android.app.shim.ViewBindingShimModule
@@ -71,17 +70,13 @@ import org.oppia.android.domain.oppialogger.analytics.ApplicationLifecycleModule
 import org.oppia.android.domain.oppialogger.analytics.CpuPerformanceSnapshotterModule
 import org.oppia.android.domain.oppialogger.logscheduler.MetricLogSchedulerModule
 import org.oppia.android.domain.oppialogger.loguploader.LogReportWorkerModule
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjector
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjectorProvider
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterTestModule
+import org.oppia.android.domain.platformparameter.PlatformParameterSingletonModule
 import org.oppia.android.domain.question.QuestionModule
 import org.oppia.android.domain.workmanager.WorkManagerConfigurationModule
-import org.oppia.android.testing.DisableFeatureFlag
-import org.oppia.android.testing.EnableFeatureFlag
-import org.oppia.android.testing.OppiaTestRule
 import org.oppia.android.testing.TestImageLoaderModule
 import org.oppia.android.testing.TestLogReportingModule
 import org.oppia.android.testing.firebase.TestAuthenticationModule
+import org.oppia.android.testing.platformparameter.TestPlatformParameterModule
 import org.oppia.android.testing.robolectric.RobolectricModule
 import org.oppia.android.testing.threading.TestCoroutineDispatchers
 import org.oppia.android.testing.threading.TestDispatcherModule
@@ -116,9 +111,6 @@ class SpotlightFragmentTest {
   @field:[Rule JvmField]
   val mockitoRule: MockitoRule = MockitoJUnit.rule()
 
-  @get:Rule
-  val oppiaTestRule = OppiaTestRule()
-
   @Inject
   lateinit var context: Context
 
@@ -149,8 +141,8 @@ class SpotlightFragmentTest {
   }
 
   @Test
-  @DisableFeatureFlag(SPOTLIGHT_UI)
   fun testSpotlightFragment_disableSpotlights_requestSpotlight_shouldNotShowSpotlight() {
+    TestPlatformParameterModule.forceEnableSpotlightUi(false)
     launch<SpotlightFragmentTestActivity>(
       createSpotlightFragmentTestActivity(context)
     ).use {
@@ -171,8 +163,8 @@ class SpotlightFragmentTest {
   }
 
   @Test
-  @EnableFeatureFlag(SPOTLIGHT_UI)
   fun testSpotlightFragment_requestSpotlight_shouldShowSpotlight() {
+    TestPlatformParameterModule.forceEnableSpotlightUi(true)
     launch<SpotlightFragmentTestActivity>(
       createSpotlightFragmentTestActivity(context)
     ).use {
@@ -193,8 +185,8 @@ class SpotlightFragmentTest {
   }
 
   @Test
-  @EnableFeatureFlag(SPOTLIGHT_UI)
   fun testSpotlightFragment_requestDelayedSpotlight_shouldShowSpotlight() {
+    TestPlatformParameterModule.forceEnableSpotlightUi(true)
     launch<SpotlightFragmentTestActivity>(createSpotlightFragmentTestActivity(context)).use {
       testCoroutineDispatchers.runCurrent()
       it.onActivity { activity ->
@@ -215,8 +207,8 @@ class SpotlightFragmentTest {
   }
 
   @Test
-  @EnableFeatureFlag(SPOTLIGHT_UI)
   fun testSpotlightFragment_markSpotlightSeen_checkSpotlightIsNotShowAgain() {
+    TestPlatformParameterModule.forceEnableSpotlightUi(true)
     launch<SpotlightFragmentTestActivity>(createSpotlightFragmentTestActivity(context)).use {
       it.onActivity { activity ->
         val spotlightTarget = SpotlightTarget(
@@ -251,8 +243,8 @@ class SpotlightFragmentTest {
   }
 
   @Test
-  @EnableFeatureFlag(SPOTLIGHT_UI)
   fun testSpotlightFragment_exitSpotlightWithoutClickingDone_checkSpotlightIsShowAgain() {
+    TestPlatformParameterModule.forceEnableSpotlightUi(true)
     launch<SpotlightFragmentTestActivity>(createSpotlightFragmentTestActivity(context)).use {
       it.onActivity { activity ->
         val spotlightTarget = SpotlightTarget(
@@ -286,8 +278,8 @@ class SpotlightFragmentTest {
   }
 
   @Test
-  @EnableFeatureFlag(SPOTLIGHT_UI)
   fun testSpotlightQueuing_requestTwoSpotlights_checkFirstSpotlightShown() {
+    TestPlatformParameterModule.forceEnableSpotlightUi(true)
     launch<SpotlightFragmentTestActivity>(
       createSpotlightFragmentTestActivity(context)
     ).use {
@@ -317,8 +309,8 @@ class SpotlightFragmentTest {
   }
 
   @Test
-  @EnableFeatureFlag(SPOTLIGHT_UI)
   fun testSpotlightQueuing_requestTwoSpotlights_pressDone_checkSecondSpotlightShown() {
+    TestPlatformParameterModule.forceEnableSpotlightUi(true)
     launch<SpotlightFragmentTestActivity>(
       createSpotlightFragmentTestActivity(context)
     ).use {
@@ -350,8 +342,8 @@ class SpotlightFragmentTest {
   }
 
   @Test
-  @EnableFeatureFlag(SPOTLIGHT_UI)
   fun testFragment_fragmentLoaded_verifyCorrectArgumentsPassed() {
+    TestPlatformParameterModule.forceEnableSpotlightUi(true)
     launch<SpotlightFragmentTestActivity>(
       createSpotlightFragmentTestActivity(context)
     ).use { scenario ->
@@ -418,7 +410,7 @@ class SpotlightFragmentTest {
       NumberWithUnitsRuleModule::class,
       NumericExpressionInputModule::class,
       NumericInputRuleModule::class,
-      PlatformParameterTestModule::class,
+      PlatformParameterSingletonModule::class,
       QuestionModule::class,
       RatioInputModule::class,
       RetrofitModule::class,
@@ -430,15 +422,14 @@ class SpotlightFragmentTest {
       TestDispatcherModule::class,
       TestImageLoaderModule::class,
       TestLogReportingModule::class,
+      TestPlatformParameterModule::class,
       TestingBuildFlavorModule::class,
       TextInputRuleModule::class,
       ViewBindingShimModule::class,
       WorkManagerConfigurationModule::class
     ]
   )
-  interface TestApplicationComponent :
-    ApplicationComponent,
-    PlatformParameterInitializationInjector {
+  interface TestApplicationComponent : ApplicationComponent {
     @Component.Builder
     interface Builder : ApplicationComponent.Builder {
       override fun build(): TestApplicationComponent
@@ -447,11 +438,7 @@ class SpotlightFragmentTest {
     fun inject(spotlightFragmentTest: SpotlightFragmentTest)
   }
 
-  class TestApplication :
-    Application(),
-    ActivityComponentFactory,
-    ApplicationInjectorProvider,
-    PlatformParameterInitializationInjectorProvider {
+  class TestApplication : Application(), ActivityComponentFactory, ApplicationInjectorProvider {
     private val component: TestApplicationComponent by lazy {
       DaggerSpotlightFragmentTest_TestApplicationComponent.builder()
         .setApplication(this)
@@ -467,7 +454,5 @@ class SpotlightFragmentTest {
     }
 
     override fun getApplicationInjector(): ApplicationInjector = component
-
-    override fun getPlatformParameterInitializationInjector() = component
   }
 }

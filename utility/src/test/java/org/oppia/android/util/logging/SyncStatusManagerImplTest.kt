@@ -12,8 +12,6 @@ import kotlinx.coroutines.CoroutineDispatcher
 import org.junit.Before
 import org.junit.runner.RunWith
 import org.oppia.android.data.persistence.PersistentCacheStore
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjector
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjectorProvider
 import org.oppia.android.testing.TestLogReportingModule
 import org.oppia.android.testing.data.DataProviderTestMonitor
 import org.oppia.android.testing.networking.NetworkConnectionTestUtil
@@ -25,6 +23,12 @@ import org.oppia.android.util.data.DataProvidersInjector
 import org.oppia.android.util.data.DataProvidersInjectorProvider
 import org.oppia.android.util.locale.LocaleProdModule
 import org.oppia.android.util.networking.NetworkConnectionUtilDebugModule
+import org.oppia.android.util.platformparameter.EnableLearnerStudyAnalytics
+import org.oppia.android.util.platformparameter.PlatformParameterValue
+import org.oppia.android.util.platformparameter.SPLASH_SCREEN_WELCOME_MSG_DEFAULT_VALUE
+import org.oppia.android.util.platformparameter.SYNC_UP_WORKER_TIME_PERIOD_IN_HOURS_DEFAULT_VALUE
+import org.oppia.android.util.platformparameter.SplashScreenWelcomeMsg
+import org.oppia.android.util.platformparameter.SyncUpWorkerTimePeriodHours
 import org.oppia.android.util.threading.BackgroundDispatcher
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.LooperMode
@@ -82,6 +86,34 @@ class SyncStatusManagerImplTest : SyncStatusManagerTestBase() {
     fun provideGlobalLogLevel(): LogLevel = LogLevel.VERBOSE
   }
 
+  @Module
+  class TestPlatformParameterModule {
+
+    companion object {
+      var forceLearnerAnalyticsStudy: Boolean = false
+    }
+
+    @Provides
+    @SplashScreenWelcomeMsg
+    fun provideSplashScreenWelcomeMsgParam(): PlatformParameterValue<Boolean> {
+      return PlatformParameterValue.createDefaultParameter(SPLASH_SCREEN_WELCOME_MSG_DEFAULT_VALUE)
+    }
+
+    @Provides
+    @SyncUpWorkerTimePeriodHours
+    fun provideSyncUpWorkerTimePeriod(): PlatformParameterValue<Int> {
+      return PlatformParameterValue.createDefaultParameter(
+        SYNC_UP_WORKER_TIME_PERIOD_IN_HOURS_DEFAULT_VALUE
+      )
+    }
+
+    @Provides
+    @EnableLearnerStudyAnalytics
+    fun provideLearnerStudyAnalytics(): PlatformParameterValue<Boolean> {
+      return PlatformParameterValue.createDefaultParameter(forceLearnerAnalyticsStudy)
+    }
+  }
+
   // TODO(#89): Move this to a common test application component.
   @Singleton
   @Component(
@@ -89,17 +121,15 @@ class SyncStatusManagerImplTest : SyncStatusManagerTestBase() {
       FakeOppiaClockModule::class,
       LocaleProdModule::class,
       NetworkConnectionUtilDebugModule::class,
-      PlatformParameterTestModule::class,
       RobolectricModule::class,
       SyncStatusModule::class,
       TestDispatcherModule::class,
       TestLogReportingModule::class,
-      TestModule::class
+      TestModule::class,
+      TestPlatformParameterModule::class
     ]
   )
-  interface TestApplicationComponent :
-    DataProvidersInjector,
-    PlatformParameterInitializationInjector {
+  interface TestApplicationComponent : DataProvidersInjector {
     @Component.Builder
     interface Builder {
       @BindsInstance
@@ -110,10 +140,7 @@ class SyncStatusManagerImplTest : SyncStatusManagerTestBase() {
     fun inject(syncStatusControllerTest: SyncStatusManagerImplTest)
   }
 
-  class TestApplication :
-    Application(),
-    DataProvidersInjectorProvider,
-    PlatformParameterInitializationInjectorProvider {
+  class TestApplication : Application(), DataProvidersInjectorProvider {
     private val component: TestApplicationComponent by lazy {
       DaggerSyncStatusManagerImplTest_TestApplicationComponent.builder()
         .setApplication(this)
@@ -125,7 +152,5 @@ class SyncStatusManagerImplTest : SyncStatusManagerTestBase() {
     }
 
     override fun getDataProvidersInjector(): DataProvidersInjector = component
-
-    override fun getPlatformParameterInitializationInjector() = component
   }
 }

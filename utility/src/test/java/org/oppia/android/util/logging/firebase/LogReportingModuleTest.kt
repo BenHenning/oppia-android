@@ -5,28 +5,17 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
-import com.google.firebase.FirebaseApp
 import dagger.Binds
 import dagger.BindsInstance
 import dagger.Component
 import dagger.Module
+import dagger.Provides
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.oppia.android.data.backends.gae.RetrofitModule
-import org.oppia.android.data.backends.gae.RetrofitServiceModule
-import org.oppia.android.data.backends.gae.testing.NetworkConfigTestModule
-import org.oppia.android.domain.platformparameter.PlatformParameterController
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjector
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjectorProvider
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterTestModule
-import org.oppia.android.testing.OppiaTestRule
-import org.oppia.android.testing.data.DataProviderTestMonitor
 import org.oppia.android.testing.robolectric.RobolectricModule
 import org.oppia.android.testing.threading.TestDispatcherModule
 import org.oppia.android.testing.time.FakeOppiaClockModule
-import org.oppia.android.util.caching.AssetModule
 import org.oppia.android.util.data.DataProvidersInjector
 import org.oppia.android.util.data.DataProvidersInjectorProvider
 import org.oppia.android.util.locale.LocaleProdModule
@@ -35,6 +24,12 @@ import org.oppia.android.util.logging.LoggerModule
 import org.oppia.android.util.logging.SyncStatusModule
 import org.oppia.android.util.logging.performancemetrics.PerformanceMetricsEventLogger
 import org.oppia.android.util.networking.NetworkConnectionUtilDebugModule
+import org.oppia.android.util.platformparameter.EnableLoggingLearnerStudyIds
+import org.oppia.android.util.platformparameter.PlatformParameterValue
+import org.oppia.android.util.platformparameter.SPLASH_SCREEN_WELCOME_MSG_DEFAULT_VALUE
+import org.oppia.android.util.platformparameter.SYNC_UP_WORKER_TIME_PERIOD_IN_HOURS_DEFAULT_VALUE
+import org.oppia.android.util.platformparameter.SplashScreenWelcomeMsg
+import org.oppia.android.util.platformparameter.SyncUpWorkerTimePeriodHours
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.LooperMode
 import javax.inject.Inject
@@ -47,11 +42,12 @@ import javax.inject.Singleton
 @LooperMode(LooperMode.Mode.PAUSED)
 @Config(application = LogReportingModuleTest.TestApplication::class)
 class LogReportingModuleTest {
-  @get:Rule
-  val oppiaTestRule = OppiaTestRule()
 
-  @Inject lateinit var performanceMetricsEventLogger: PerformanceMetricsEventLogger
-  @Inject lateinit var analyticsEventLogger: AnalyticsEventLogger
+  @Inject
+  lateinit var performanceMetricsEventLogger: PerformanceMetricsEventLogger
+
+  @Inject
+  lateinit var analyticsEventLogger: AnalyticsEventLogger
 
   @Before
   fun setUp() {
@@ -79,29 +75,51 @@ class LogReportingModuleTest {
     fun provideContext(application: Application): Context
   }
 
+  @Module
+  class TestPlatformParameterModule {
+
+    companion object {
+      var forceLoggingLearnerStudyIds: Boolean = false
+    }
+
+    @Provides
+    @SplashScreenWelcomeMsg
+    fun provideSplashScreenWelcomeMsgParam(): PlatformParameterValue<Boolean> {
+      return PlatformParameterValue.createDefaultParameter(SPLASH_SCREEN_WELCOME_MSG_DEFAULT_VALUE)
+    }
+
+    @Provides
+    @SyncUpWorkerTimePeriodHours
+    fun provideSyncUpWorkerTimePeriod(): PlatformParameterValue<Int> {
+      return PlatformParameterValue.createDefaultParameter(
+        SYNC_UP_WORKER_TIME_PERIOD_IN_HOURS_DEFAULT_VALUE
+      )
+    }
+
+    @Provides
+    @EnableLoggingLearnerStudyIds
+    fun provideLoggingLearnerStudyIds(): PlatformParameterValue<Boolean> {
+      return PlatformParameterValue.createDefaultParameter(forceLoggingLearnerStudyIds)
+    }
+  }
+
   // TODO(#89): Move this to a common test application component.
   @Singleton
   @Component(
     modules = [
-      AssetModule::class,
       FakeOppiaClockModule::class,
       LocaleProdModule::class,
       LogReportingModule::class,
       LoggerModule::class,
-      NetworkConfigTestModule::class,
       NetworkConnectionUtilDebugModule::class,
-      PlatformParameterTestModule::class,
-      RetrofitModule::class,
-      RetrofitServiceModule::class,
       RobolectricModule::class,
       SyncStatusModule::class,
       TestDispatcherModule::class,
-      TestModule::class
+      TestModule::class,
+      TestPlatformParameterModule::class
     ]
   )
-  interface TestApplicationComponent :
-    DataProvidersInjector,
-    PlatformParameterInitializationInjector {
+  interface TestApplicationComponent : DataProvidersInjector {
     @Component.Builder
     interface Builder {
       @BindsInstance
@@ -109,38 +127,20 @@ class LogReportingModuleTest {
       fun build(): TestApplicationComponent
     }
 
-    fun getPlatformParameterController(): PlatformParameterController
-
-    fun getDataProviderTestMonitorFactory(): DataProviderTestMonitor.Factory
-
     fun inject(logReportingModuleTest: LogReportingModuleTest)
   }
 
-  class TestApplication :
-    Application(),
-    DataProvidersInjectorProvider,
-    PlatformParameterInitializationInjectorProvider {
+  class TestApplication : Application(), DataProvidersInjectorProvider {
     private val component: TestApplicationComponent by lazy {
       DaggerLogReportingModuleTest_TestApplicationComponent.builder()
         .setApplication(this)
         .build()
     }
 
-    override fun onCreate() {
-      super.onCreate()
-      FirebaseApp.initializeApp(applicationContext)
-    }
-
-    fun getPlatformParameterController() = component.getPlatformParameterController()
-
-    fun getDataProviderTestMonitorFactory() = component.getDataProviderTestMonitorFactory()
-
     fun inject(test: LogReportingModuleTest) {
       component.inject(test)
     }
 
     override fun getDataProvidersInjector(): DataProvidersInjector = component
-
-    override fun getPlatformParameterInitializationInjector() = component
   }
 }

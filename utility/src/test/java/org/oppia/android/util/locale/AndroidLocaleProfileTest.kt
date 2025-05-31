@@ -10,7 +10,6 @@ import dagger.Component
 import dagger.Module
 import dagger.Provides
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.oppia.android.app.model.LanguageSupportDefinition.AndroidLanguageId
@@ -20,7 +19,6 @@ import org.oppia.android.app.model.LanguageSupportDefinition.MacaronicLanguageId
 import org.oppia.android.app.model.OppiaRegion
 import org.oppia.android.app.model.RegionSupportDefinition
 import org.oppia.android.app.model.RegionSupportDefinition.IetfBcp47RegionId
-import org.oppia.android.testing.OppiaTestRule
 import org.oppia.android.testing.time.FakeOppiaClockModule
 import org.oppia.android.util.locale.AndroidLocaleProfile.LanguageAndRegionProfile
 import org.oppia.android.util.locale.AndroidLocaleProfile.LanguageAndWildcardRegionProfile
@@ -40,9 +38,6 @@ import javax.inject.Singleton
 @LooperMode(LooperMode.Mode.PAUSED)
 @Config(manifest = Config.NONE)
 class AndroidLocaleProfileTest {
-  @get:Rule
-  val oppiaTestRule = OppiaTestRule()
-
   @Inject lateinit var androidLocaleProfileFactory: AndroidLocaleProfile.Factory
 
   private val brazilianPortugueseLocale by lazy { Locale("pt", "BR") }

@@ -22,7 +22,6 @@ import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 import org.mockito.junit.MockitoJUnit
 import org.mockito.junit.MockitoRule
-import org.oppia.android.testing.OppiaTestRule
 import org.oppia.android.testing.assertThrows
 import org.oppia.android.testing.robolectric.RobolectricModule
 import org.oppia.android.testing.threading.TestCoroutineDispatchers
@@ -41,9 +40,6 @@ import javax.inject.Singleton
 @LooperMode(LooperMode.Mode.PAUSED)
 @Config(manifest = Config.NONE)
 class AsyncDataSubscriptionManagerTest {
-  @get:Rule
-  val oppiaTestRule = OppiaTestRule()
-
   @Rule
   @JvmField
   val mockitoRule: MockitoRule = MockitoJUnit.rule()

@@ -16,14 +16,11 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import org.junit.Assert.fail
-import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.oppia.android.app.model.AppLanguageSelection
 import org.oppia.android.app.model.AudioTranslationLanguageSelection
 import org.oppia.android.app.model.EventLog
-import org.oppia.android.app.model.FeatureFlagId.LEARNER_STUDY_ANALYTICS
 import org.oppia.android.app.model.OppiaEventLogs
 import org.oppia.android.app.model.OppiaLanguage
 import org.oppia.android.app.model.OppiaLanguage.ENGLISH
@@ -31,29 +28,23 @@ import org.oppia.android.app.model.OppiaLanguage.HINGLISH
 import org.oppia.android.app.model.OppiaLanguage.SWAHILI
 import org.oppia.android.app.model.ProfileId
 import org.oppia.android.app.model.WrittenTranslationLanguageSelection
-import org.oppia.android.data.backends.gae.RetrofitModule
-import org.oppia.android.data.backends.gae.RetrofitServiceModule
-import org.oppia.android.data.backends.gae.testing.NetworkConfigTestModule
 import org.oppia.android.data.persistence.PersistentCacheStore
 import org.oppia.android.domain.oppialogger.EventLogStorageCacheSize
 import org.oppia.android.domain.oppialogger.ExceptionLogStorageCacheSize
 import org.oppia.android.domain.oppialogger.LoggingIdentifierModule
 import org.oppia.android.domain.oppialogger.OppiaLogger
 import org.oppia.android.domain.oppialogger.PerformanceMetricsLogStorageCacheSize
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjector
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjectorProvider
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterTestModule
+import org.oppia.android.domain.platformparameter.PlatformParameterSingletonModule
 import org.oppia.android.domain.profile.ProfileManagementController
 import org.oppia.android.domain.translation.TranslationController
-import org.oppia.android.testing.EnableFeatureFlag
 import org.oppia.android.testing.FakeAnalyticsEventLogger
-import org.oppia.android.testing.OppiaTestRule
 import org.oppia.android.testing.TestLogReportingModule
 import org.oppia.android.testing.data.AsyncResultSubject.Companion.assertThat
 import org.oppia.android.testing.data.DataProviderTestMonitor
 import org.oppia.android.testing.logging.EventLogSubject.Companion.assertThat
 import org.oppia.android.testing.logging.SyncStatusTestModule
 import org.oppia.android.testing.logging.TestSyncStatusManager
+import org.oppia.android.testing.platformparameter.TestPlatformParameterModule
 import org.oppia.android.testing.robolectric.RobolectricModule
 import org.oppia.android.testing.threading.TestCoroutineDispatchers
 import org.oppia.android.testing.threading.TestDispatcherModule
@@ -103,9 +94,6 @@ private const val TEST_SUB_TOPIC_ID = 1
 @LooperMode(LooperMode.Mode.PAUSED)
 @Config(application = AnalyticsControllerTest.TestApplication::class)
 class AnalyticsControllerTest {
-  @get:Rule
-  val oppiaTestRule = OppiaTestRule()
-
   @Inject lateinit var analyticsControllerProvider: Provider<AnalyticsController>
   @Inject lateinit var oppiaLogger: OppiaLogger
   @Inject lateinit var networkConnectionUtil: NetworkConnectionDebugUtil
@@ -125,13 +113,9 @@ class AnalyticsControllerTest {
   private val profileManagementController by lazy { profileManagementControllerProvider.get() }
   private val analyticsController by lazy { analyticsControllerProvider.get() }
 
-  @Before
-  fun setUp() {
-    setUpTestApplicationComponent()
-  }
-
   @Test
   fun testController_logImportantEvent_withQuestionContext_checkLogsEvent() {
+    setUpTestApplicationComponent()
     analyticsController.logImportantEvent(
       oppiaLogger.createOpenQuestionPlayerContext(
         TEST_QUESTION_ID,
@@ -152,6 +136,7 @@ class AnalyticsControllerTest {
 
   @Test
   fun testController_logImportantEvent_withExplorationContext_checkLogsEvent() {
+    setUpTestApplicationComponent()
     analyticsController.logImportantEvent(
       oppiaLogger.createOpenExplorationActivityContext(
         TEST_CLASSROOM_ID,
@@ -172,6 +157,7 @@ class AnalyticsControllerTest {
 
   @Test
   fun testController_logImportantEvent_withOpenInfoTabContext_checkLogsEvent() {
+    setUpTestApplicationComponent()
     analyticsController.logImportantEvent(
       oppiaLogger.createOpenInfoTabContext(TEST_TOPIC_ID), profileId = null, TEST_TIMESTAMP
     )
@@ -185,6 +171,7 @@ class AnalyticsControllerTest {
 
   @Test
   fun testController_logImportantEvent_withOpenPracticeTabContext_checkLogsEvent() {
+    setUpTestApplicationComponent()
     analyticsController.logImportantEvent(
       oppiaLogger.createOpenPracticeTabContext(TEST_TOPIC_ID), profileId = null, TEST_TIMESTAMP
     )
@@ -198,6 +185,7 @@ class AnalyticsControllerTest {
 
   @Test
   fun testController_logImportantEvent_withOpenLessonsTabContext_checkLogsEvent() {
+    setUpTestApplicationComponent()
     analyticsController.logImportantEvent(
       oppiaLogger.createOpenLessonsTabContext(TEST_TOPIC_ID), profileId = null, TEST_TIMESTAMP
     )
@@ -211,6 +199,7 @@ class AnalyticsControllerTest {
 
   @Test
   fun testController_logImportantEvent_withOpenRevisionTabContext_checkLogsEvent() {
+    setUpTestApplicationComponent()
     analyticsController.logImportantEvent(
       oppiaLogger.createOpenRevisionTabContext(TEST_TOPIC_ID), profileId = null, TEST_TIMESTAMP
     )
@@ -224,6 +213,7 @@ class AnalyticsControllerTest {
 
   @Test
   fun testController_logImportantEvent_withStoryContext_checkLogsEvent() {
+    setUpTestApplicationComponent()
     analyticsController.logImportantEvent(
       oppiaLogger.createOpenStoryActivityContext(TEST_TOPIC_ID, TEST_STORY_ID),
       profileId = null,
@@ -239,6 +229,7 @@ class AnalyticsControllerTest {
 
   @Test
   fun testController_logImportantEvent_withRevisionContext_checkLogsEvent() {
+    setUpTestApplicationComponent()
     analyticsController.logImportantEvent(
       oppiaLogger.createOpenRevisionCardContext(TEST_TOPIC_ID, TEST_SUB_TOPIC_ID),
       profileId = null,
@@ -254,6 +245,7 @@ class AnalyticsControllerTest {
 
   @Test
   fun testController_logImportantEvent_withConceptCardContext_checkLogsEvent() {
+    setUpTestApplicationComponent()
     analyticsController.logImportantEvent(
       oppiaLogger.createOpenConceptCardContext(TEST_SKILL_ID), profileId = null, TEST_TIMESTAMP
     )
@@ -267,6 +259,7 @@ class AnalyticsControllerTest {
 
   @Test
   fun testLogImportantEvent_forOpenHomeEvent_logsEssentialEventWithCurrentTime() {
+    setUpTestApplicationComponent()
     val openHomeEventContext = oppiaLogger.createOpenHomeContext()
 
     analyticsController.logImportantEvent(openHomeEventContext, profileId = null, TEST_TIMESTAMP)
@@ -279,6 +272,7 @@ class AnalyticsControllerTest {
 
   @Test
   fun testController_logImportantEvent_nullProfileId_hasDefaultLanguageSettings() {
+    setUpTestApplicationComponent()
     val openHomeEventContext = oppiaLogger.createOpenHomeContext()
     // Create a new profile & set its language settings, but don't use it when logging an event.
     val profileId = addNewProfileAndLogIn()
@@ -298,6 +292,7 @@ class AnalyticsControllerTest {
 
   @Test
   fun testController_logImportantEvent_profileWithNoLangSettings_hasDefaultLanguageSettings() {
+    setUpTestApplicationComponent()
     val openHomeEventContext = oppiaLogger.createOpenHomeContext()
     // Create a profile without any language settings.
     val profileId = addNewProfileAndLogIn()
@@ -315,6 +310,7 @@ class AnalyticsControllerTest {
 
   @Test
   fun testController_logImportantEvent_profileWithLangSettings_hasCorrectLanguageSettings() {
+    setUpTestApplicationComponent()
     val openHomeEventContext = oppiaLogger.createOpenHomeContext()
     val profileId = addNewProfileAndLogIn()
     ensureAppLanguageIsUpdatedTo(profileId, ENGLISH)
@@ -339,6 +335,7 @@ class AnalyticsControllerTest {
 
   @Test
   fun testController_logImportantEvent_noProfile_hasNoProfileId() {
+    setUpTestApplicationComponent()
     analyticsController.logImportantEvent(
       oppiaLogger.createOpenConceptCardContext(TEST_SKILL_ID), profileId = null, TEST_TIMESTAMP
     )
@@ -350,6 +347,7 @@ class AnalyticsControllerTest {
 
   @Test
   fun testController_logImportantEvent_withProfile_includesProfileId() {
+    setUpTestApplicationComponent()
     val profileId = addNewProfileAndLogIn()
     analyticsController.logImportantEvent(
       oppiaLogger.createOpenConceptCardContext(TEST_SKILL_ID), profileId, TEST_TIMESTAMP
@@ -363,6 +361,7 @@ class AnalyticsControllerTest {
 
   @Test
   fun testController_logLowPriorityEvent_withQuestionContext_checkLogsEvent() {
+    setUpTestApplicationComponent()
     analyticsController.logLowPriorityEvent(
       oppiaLogger.createOpenQuestionPlayerContext(
         TEST_QUESTION_ID,
@@ -383,6 +382,7 @@ class AnalyticsControllerTest {
 
   @Test
   fun testController_logLowPriorityEvent_withExplorationContext_checkLogsEvent() {
+    setUpTestApplicationComponent()
     analyticsController.logLowPriorityEvent(
       oppiaLogger.createOpenExplorationActivityContext(
         TEST_CLASSROOM_ID,
@@ -403,6 +403,7 @@ class AnalyticsControllerTest {
 
   @Test
   fun testController_logLowPriorityEvent_withOpenInfoTabContext_checkLogsEvent() {
+    setUpTestApplicationComponent()
     analyticsController.logLowPriorityEvent(
       oppiaLogger.createOpenInfoTabContext(TEST_TOPIC_ID), profileId = null, TEST_TIMESTAMP
     )
@@ -416,6 +417,7 @@ class AnalyticsControllerTest {
 
   @Test
   fun testController_logLowPriorityEvent_withOpenPracticeTabContext_checkLogsEvent() {
+    setUpTestApplicationComponent()
     analyticsController.logLowPriorityEvent(
       oppiaLogger.createOpenPracticeTabContext(TEST_TOPIC_ID), profileId = null, TEST_TIMESTAMP
     )
@@ -429,6 +431,7 @@ class AnalyticsControllerTest {
 
   @Test
   fun testController_logLowPriorityEvent_withOpenLessonsTabContext_checkLogsEvent() {
+    setUpTestApplicationComponent()
     analyticsController.logLowPriorityEvent(
       oppiaLogger.createOpenLessonsTabContext(TEST_TOPIC_ID), profileId = null, TEST_TIMESTAMP
     )
@@ -442,6 +445,7 @@ class AnalyticsControllerTest {
 
   @Test
   fun testController_logLowPriorityEvent_withOpenRevisionTabContext_checkLogsEvent() {
+    setUpTestApplicationComponent()
     analyticsController.logLowPriorityEvent(
       oppiaLogger.createOpenRevisionTabContext(TEST_TOPIC_ID), profileId = null, TEST_TIMESTAMP
     )
@@ -455,6 +459,7 @@ class AnalyticsControllerTest {
 
   @Test
   fun testController_logLowPriorityEvent_withStoryContext_checkLogsEvent() {
+    setUpTestApplicationComponent()
     analyticsController.logLowPriorityEvent(
       oppiaLogger.createOpenStoryActivityContext(TEST_TOPIC_ID, TEST_STORY_ID),
       profileId = null,
@@ -470,6 +475,7 @@ class AnalyticsControllerTest {
 
   @Test
   fun testController_logLowPriorityEvent_withRevisionContext_checkLogsEvent() {
+    setUpTestApplicationComponent()
     analyticsController.logLowPriorityEvent(
       oppiaLogger.createOpenRevisionCardContext(TEST_TOPIC_ID, TEST_SUB_TOPIC_ID),
       profileId = null,
@@ -485,6 +491,7 @@ class AnalyticsControllerTest {
 
   @Test
   fun testController_logLowPriorityEvent_withConceptCardContext_checkLogsEvent() {
+    setUpTestApplicationComponent()
     analyticsController.logLowPriorityEvent(
       oppiaLogger.createOpenConceptCardContext(TEST_SKILL_ID), profileId = null, TEST_TIMESTAMP
     )
@@ -501,6 +508,7 @@ class AnalyticsControllerTest {
 
   @Test
   fun testController_logImportantEvent_withNoNetwork_checkLogsEventToStore() {
+    setUpTestApplicationComponent()
     networkConnectionUtil.setCurrentConnectionStatus(NONE)
     analyticsController.logImportantEvent(
       oppiaLogger.createOpenQuestionPlayerContext(
@@ -525,6 +533,7 @@ class AnalyticsControllerTest {
 
   @Test
   fun testController_logLowPriorityEvent_withNoNetwork_checkLogsEventToStore() {
+    setUpTestApplicationComponent()
     networkConnectionUtil.setCurrentConnectionStatus(NONE)
     analyticsController.logLowPriorityEvent(
       oppiaLogger.createOpenQuestionPlayerContext(
@@ -549,6 +558,7 @@ class AnalyticsControllerTest {
 
   @Test
   fun testController_logLowPriorityEvent_nullProfileId_hasDefaultLanguageSettings() {
+    setUpTestApplicationComponent()
     val openHomeEventContext = oppiaLogger.createOpenHomeContext()
     // Create a new profile & set its language settings, but don't use it when logging an event.
     val profileId = addNewProfileAndLogIn()
@@ -568,6 +578,7 @@ class AnalyticsControllerTest {
 
   @Test
   fun testController_logLowPriorityEvent_profileWithNoLangSettings_hasDefaultLanguageSettings() {
+    setUpTestApplicationComponent()
     val openHomeEventContext = oppiaLogger.createOpenHomeContext()
     // Create a profile without any language settings.
     val profileId = addNewProfileAndLogIn()
@@ -585,6 +596,7 @@ class AnalyticsControllerTest {
 
   @Test
   fun testController_logLowPriorityEvent_profileWithLangSettings_hasCorrectLanguageSettings() {
+    setUpTestApplicationComponent()
     val openHomeEventContext = oppiaLogger.createOpenHomeContext()
     val profileId = addNewProfileAndLogIn()
     ensureAppLanguageIsUpdatedTo(profileId, ENGLISH)
@@ -609,6 +621,7 @@ class AnalyticsControllerTest {
 
   @Test
   fun testController_logPriorityEvent_noProfile_hasNoProfileId() {
+    setUpTestApplicationComponent()
     analyticsController.logLowPriorityEvent(
       oppiaLogger.createOpenConceptCardContext(TEST_SKILL_ID), profileId = null, TEST_TIMESTAMP
     )
@@ -620,6 +633,7 @@ class AnalyticsControllerTest {
 
   @Test
   fun testController_logPriorityEvent_withProfile_includesProfileId() {
+    setUpTestApplicationComponent()
     val profileId = addNewProfileAndLogIn()
     analyticsController.logLowPriorityEvent(
       oppiaLogger.createOpenConceptCardContext(TEST_SKILL_ID), profileId, TEST_TIMESTAMP
@@ -633,6 +647,7 @@ class AnalyticsControllerTest {
 
   @Test
   fun testController_logImportantEvent_withNoNetwork_exceedLimit_checkEventLogStoreSize() {
+    setUpTestApplicationComponent()
     networkConnectionUtil.setCurrentConnectionStatus(NONE)
     logFourEvents()
 
@@ -644,8 +659,8 @@ class AnalyticsControllerTest {
   }
 
   @Test
-  @EnableFeatureFlag(LEARNER_STUDY_ANALYTICS)
   fun testController_logImportantEvent_withNoNetwork_exceedLimit_studyOn_checkEventLogStoreSize() {
+    setUpTestApplicationComponent(enableLearnerStudyAnalytics = true)
     networkConnectionUtil.setCurrentConnectionStatus(NONE)
     logFourEvents()
 
@@ -658,6 +673,7 @@ class AnalyticsControllerTest {
 
   @Test
   fun testController_logImportantEvent_logLowPriorityEvent_withNoNetwork_checkOrderinCache() {
+    setUpTestApplicationComponent()
     networkConnectionUtil.setCurrentConnectionStatus(NONE)
     analyticsController.logLowPriorityEvent(
       oppiaLogger.createOpenQuestionPlayerContext(
@@ -694,6 +710,7 @@ class AnalyticsControllerTest {
 
   @Test
   fun testController_logImportantEvent_switchToNoNetwork_logLowPriorityEvent_checkManagement() {
+    setUpTestApplicationComponent()
     analyticsController.logImportantEvent(
       oppiaLogger.createOpenQuestionPlayerContext(
         TEST_QUESTION_ID,
@@ -735,6 +752,7 @@ class AnalyticsControllerTest {
 
   @Test
   fun testController_logEvents_exceedLimit_withNoNetwork_checkCorrectEventIsEvicted() {
+    setUpTestApplicationComponent()
     networkConnectionUtil.setCurrentConnectionStatus(NONE)
     logFourEvents()
 
@@ -760,9 +778,9 @@ class AnalyticsControllerTest {
   }
 
   @Test
-  @EnableFeatureFlag(LEARNER_STUDY_ANALYTICS)
   fun testController_logEvent_withoutNetwork_studyOn_verifySyncStatusIsUnchanged() {
     // Sync statuses only make sense in the context of the learner study feature being enabled.
+    setUpTestApplicationComponent(enableLearnerStudyAnalytics = true)
     networkConnectionUtil.setCurrentConnectionStatus(NONE)
     analyticsController.logImportantEvent(
       oppiaLogger.createOpenQuestionPlayerContext(
@@ -781,9 +799,9 @@ class AnalyticsControllerTest {
   }
 
   @Test
-  @EnableFeatureFlag(LEARNER_STUDY_ANALYTICS)
   fun testController_logEvent_studyOn_verifySyncStatusChangesToRepresentLoggedEvent() {
     // Sync statuses only make sense in the context of the learner study feature being enabled.
+    setUpTestApplicationComponent(enableLearnerStudyAnalytics = true)
     analyticsController.logImportantEvent(
       oppiaLogger.createOpenQuestionPlayerContext(
         TEST_QUESTION_ID,
@@ -803,6 +821,7 @@ class AnalyticsControllerTest {
 
   @Test
   fun testController_logImportantEvent_studyOff_doesNotRecordEventsAsUploaded() {
+    setUpTestApplicationComponent(enableLearnerStudyAnalytics = false)
     // The important event should be marked as uploaded.
     analyticsController.logImportantEvent(oppiaLogger.createOpenHomeContext(), profileId = null)
     testCoroutineDispatchers.runCurrent()
@@ -815,9 +834,9 @@ class AnalyticsControllerTest {
   }
 
   @Test
-  @EnableFeatureFlag(LEARNER_STUDY_ANALYTICS)
   fun testController_logImportantEvent_studyOn_recordsEventAsUploaded() {
     // Events are only tracked as uploaded when the learner study feature being enabled.
+    setUpTestApplicationComponent(enableLearnerStudyAnalytics = true)
     // The important event should be marked as uploaded.
     analyticsController.logImportantEvent(oppiaLogger.createOpenHomeContext(), profileId = null)
     testCoroutineDispatchers.runCurrent()
@@ -831,6 +850,7 @@ class AnalyticsControllerTest {
 
   @Test
   fun testController_uploadEventLogs_noLogs_cacheUnchanged() {
+    setUpTestApplicationComponent()
     val monitor = monitorFactory.createMonitor(analyticsController.getEventLogStore())
 
     monitorFactory.ensureDataProviderExecutes(analyticsController.uploadEventLogs())
@@ -841,8 +861,8 @@ class AnalyticsControllerTest {
   }
 
   @Test
-  @EnableFeatureFlag(LEARNER_STUDY_ANALYTICS)
   fun testController_uploadEventLogs_noLogs_studyOn_cacheUnchanged() {
+    setUpTestApplicationComponent(enableLearnerStudyAnalytics = true)
     val monitor = monitorFactory.createMonitor(analyticsController.getEventLogStore())
 
     monitorFactory.ensureDataProviderExecutes(analyticsController.uploadEventLogs())
@@ -854,6 +874,7 @@ class AnalyticsControllerTest {
 
   @Test
   fun testController_uploadEventLogs_noLogs_returnsPendingAndSimpleSuccessDataProvider() {
+    setUpTestApplicationComponent()
     val uploadResults = monitorFactory.waitForAllNextResults {
       analyticsController.uploadEventLogs()
     }
@@ -864,9 +885,9 @@ class AnalyticsControllerTest {
   }
 
   @Test
-  @EnableFeatureFlag(LEARNER_STUDY_ANALYTICS)
   fun testController_uploadEventLogs_withPreviousLogs_studyOn_setsSyncStatusToUploadingUploaded() {
     // Sync statuses only make sense in the context of the learner study feature being enabled.
+    setUpTestApplicationComponent(enableLearnerStudyAnalytics = true)
     logTwoEvents()
 
     monitorFactory.waitForAllNextResults { analyticsController.uploadEventLogs() }
@@ -883,9 +904,9 @@ class AnalyticsControllerTest {
   }
 
   @Test
-  @EnableFeatureFlag(LEARNER_STUDY_ANALYTICS)
   fun testController_uploadEventLogs_withLogs_studyOn_setsSyncStatusToUploadingThenUploaded() {
     // Sync statuses only make sense in the context of the learner study feature being enabled.
+    setUpTestApplicationComponent(enableLearnerStudyAnalytics = true)
     logTwoEventsOffline()
 
     monitorFactory.waitForAllNextResults { analyticsController.uploadEventLogs() }
@@ -898,6 +919,7 @@ class AnalyticsControllerTest {
 
   @Test
   fun testController_uploadEventLogs_withLogs_studyOff_removesEventsButDoesNotTrackThem() {
+    setUpTestApplicationComponent(enableLearnerStudyAnalytics = false)
     logTwoEventsOffline()
 
     monitorFactory.waitForAllNextResults { analyticsController.uploadEventLogs() }
@@ -910,8 +932,8 @@ class AnalyticsControllerTest {
   }
 
   @Test
-  @EnableFeatureFlag(LEARNER_STUDY_ANALYTICS)
   fun testController_uploadEventLogs_withLogs_studyOn_removesEventsForUploading() {
+    setUpTestApplicationComponent(enableLearnerStudyAnalytics = true)
     logTwoEventsOffline()
 
     monitorFactory.waitForAllNextResults { analyticsController.uploadEventLogs() }
@@ -924,6 +946,7 @@ class AnalyticsControllerTest {
 
   @Test
   fun testController_uploadEventLogs_withPreviousLogs_recordsEventsAsUploaded() {
+    setUpTestApplicationComponent()
     logTwoEvents()
 
     monitorFactory.waitForAllNextResults { analyticsController.uploadEventLogs() }
@@ -933,6 +956,7 @@ class AnalyticsControllerTest {
 
   @Test
   fun testController_uploadEventLogs_withLogs_recordsEventsAsUploaded() {
+    setUpTestApplicationComponent()
     logTwoEventsOffline()
 
     monitorFactory.waitForAllNextResults { analyticsController.uploadEventLogs() }
@@ -942,6 +966,7 @@ class AnalyticsControllerTest {
 
   @Test
   fun testController_uploadEventLogs_withPreviousLogs_returnsProgressContext() {
+    setUpTestApplicationComponent()
     logTwoEvents()
 
     val uploadResults = monitorFactory.waitForAllNextResults {
@@ -956,6 +981,7 @@ class AnalyticsControllerTest {
 
   @Test
   fun testController_uploadEventLogs_withLogs_returnsProgressContext() {
+    setUpTestApplicationComponent()
     logTwoEventsOffline()
 
     val uploadResults = monitorFactory.waitForAllNextResults {
@@ -977,13 +1003,11 @@ class AnalyticsControllerTest {
         assertThat(uploadResults[0]).isPending()
         assertThat(uploadResults[1]).isSuccessThat().isEqualTo(1 to 2)
       }
-
       4 -> {
         assertThat(uploadResults[0]).isPending()
         assertThat(uploadResults[1]).isSuccessThat().isEqualTo(0 to 2)
         assertThat(uploadResults[2]).isSuccessThat().isEqualTo(1 to 2)
       }
-
       else -> fail("Encountered too many upload results: ${uploadResults.size}.")
     }
     assertThat(uploadResults.last()).isSuccessThat().isEqualTo(2 to 2)
@@ -991,6 +1015,7 @@ class AnalyticsControllerTest {
 
   @Test
   fun testController_uploadEventLogsAndWait_noLogs_cacheUnchanged() {
+    setUpTestApplicationComponent()
     val monitor = monitorFactory.createMonitor(analyticsController.getEventLogStore())
 
     runSynchronously { analyticsController.uploadEventLogsAndWait() }
@@ -1001,8 +1026,8 @@ class AnalyticsControllerTest {
   }
 
   @Test
-  @EnableFeatureFlag(LEARNER_STUDY_ANALYTICS)
   fun testController_uploadEventLogsAndWait_noLogs_studyOn_cacheUnchanged() {
+    setUpTestApplicationComponent(enableLearnerStudyAnalytics = true)
     val monitor = monitorFactory.createMonitor(analyticsController.getEventLogStore())
 
     runSynchronously { analyticsController.uploadEventLogsAndWait() }
@@ -1013,9 +1038,9 @@ class AnalyticsControllerTest {
   }
 
   @Test
-  @EnableFeatureFlag(LEARNER_STUDY_ANALYTICS)
   fun testController_uploadEventLogsAndWait_prevLogs_studyOn_setsSyncStatusToUploadingUploaded() {
     // Sync statuses only make sense in the context of the learner study feature being enabled.
+    setUpTestApplicationComponent(enableLearnerStudyAnalytics = true)
     logTwoEvents()
 
     runSynchronously { analyticsController.uploadEventLogsAndWait() }
@@ -1034,9 +1059,9 @@ class AnalyticsControllerTest {
   }
 
   @Test
-  @EnableFeatureFlag(LEARNER_STUDY_ANALYTICS)
   fun testController_uploadEventLogsAndWait_withLogs_studyOn_setsSyncStatusToUploadingUploaded() {
     // Sync statuses only make sense in the context of the learner study feature being enabled.
+    setUpTestApplicationComponent(enableLearnerStudyAnalytics = true)
     logTwoEventsOffline()
 
     runSynchronously { analyticsController.uploadEventLogsAndWait() }
@@ -1049,6 +1074,7 @@ class AnalyticsControllerTest {
 
   @Test
   fun testController_uploadEventLogsAndWait_withLogs_studyOff_removesEventsButDoesNotTrackThem() {
+    setUpTestApplicationComponent(enableLearnerStudyAnalytics = false)
     logTwoEventsOffline()
 
     runSynchronously { analyticsController.uploadEventLogsAndWait() }
@@ -1061,8 +1087,8 @@ class AnalyticsControllerTest {
   }
 
   @Test
-  @EnableFeatureFlag(LEARNER_STUDY_ANALYTICS)
   fun testController_uploadEventLogsAndWait_withLogs_studyOn_removesEventsForUploading() {
+    setUpTestApplicationComponent(enableLearnerStudyAnalytics = true)
     logTwoEventsOffline()
 
     runSynchronously { analyticsController.uploadEventLogsAndWait() }
@@ -1075,6 +1101,7 @@ class AnalyticsControllerTest {
 
   @Test
   fun testController_uploadEventLogsAndWait_withPreviousLogs_recordsEventsAsUploaded() {
+    setUpTestApplicationComponent()
     logTwoEvents()
 
     runSynchronously { analyticsController.uploadEventLogsAndWait() }
@@ -1084,6 +1111,7 @@ class AnalyticsControllerTest {
 
   @Test
   fun testController_uploadEventLogsAndWait_withLogs_recordsEventsAsUploaded() {
+    setUpTestApplicationComponent()
     logTwoEventsOffline()
 
     runSynchronously { analyticsController.uploadEventLogsAndWait() }
@@ -1093,6 +1121,7 @@ class AnalyticsControllerTest {
 
   @Test
   fun testController_cachedEventsFromLastAppInstance_logNewEvent_onlyLatestEventLogged() {
+    setUpTestApplicationComponent()
     // Simulate events being logged in a previous instance of the app.
     logTwoCachedEventsDirectlyOnDisk()
 
@@ -1105,6 +1134,7 @@ class AnalyticsControllerTest {
 
   @Test
   fun testController_cachedEventsFromLastAppInstance_logNewEvent_thenForceSync_everythingUploads() {
+    setUpTestApplicationComponent()
     // Simulate events being logged in a previous instance of the app.
     logTwoCachedEventsDirectlyOnDisk()
     analyticsController.logImportantEvent(oppiaLogger.createOpenHomeContext(), profileId = null)
@@ -1147,7 +1177,8 @@ class AnalyticsControllerTest {
     }
   }
 
-  private fun setUpTestApplicationComponent() {
+  private fun setUpTestApplicationComponent(enableLearnerStudyAnalytics: Boolean = false) {
+    TestPlatformParameterModule.forceEnableLearnerStudyAnalytics(enableLearnerStudyAnalytics)
     ApplicationProvider.getApplicationContext<TestApplication>().inject(this)
   }
 
@@ -1361,22 +1392,18 @@ class AnalyticsControllerTest {
       FakeOppiaClockModule::class,
       LocaleProdModule::class,
       LoggingIdentifierModule::class,
-      NetworkConfigTestModule::class,
       NetworkConnectionUtilDebugModule::class,
-      PlatformParameterTestModule::class,
-      RetrofitModule::class,
-      RetrofitServiceModule::class,
+      PlatformParameterSingletonModule::class,
       RobolectricModule::class,
       SyncStatusTestModule::class,
       TestDispatcherModule::class,
       TestLogReportingModule::class,
       TestLogStorageModule::class,
-      TestModule::class
+      TestModule::class,
+      TestPlatformParameterModule::class
     ]
   )
-  interface TestApplicationComponent :
-    DataProvidersInjector,
-    PlatformParameterInitializationInjector {
+  interface TestApplicationComponent : DataProvidersInjector {
     @Component.Builder
     interface Builder {
       @BindsInstance
@@ -1387,10 +1414,7 @@ class AnalyticsControllerTest {
     fun inject(analyticsControllerTest: AnalyticsControllerTest)
   }
 
-  class TestApplication :
-    Application(),
-    DataProvidersInjectorProvider,
-    PlatformParameterInitializationInjectorProvider {
+  class TestApplication : Application(), DataProvidersInjectorProvider {
     private val component: TestApplicationComponent by lazy {
       DaggerAnalyticsControllerTest_TestApplicationComponent.builder()
         .setApplication(this)
@@ -1402,7 +1426,5 @@ class AnalyticsControllerTest {
     }
 
     override fun getDataProvidersInjector(): DataProvidersInjector = component
-
-    override fun getPlatformParameterInitializationInjector() = component
   }
 }

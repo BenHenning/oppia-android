@@ -10,12 +10,8 @@ import dagger.BindsInstance
 import dagger.Component
 import dagger.Module
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjector
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjectorProvider
-import org.oppia.android.testing.OppiaTestRule
 import org.oppia.android.testing.robolectric.RobolectricModule
 import org.oppia.android.testing.threading.TestDispatcherModule
 import org.oppia.android.util.data.DataProvidersInjector
@@ -36,8 +32,6 @@ private const val ONE_GIGABYTE = 1024L * 1024L * 1024L
 @LooperMode(LooperMode.Mode.PAUSED)
 @Config(application = PerformanceMetricsConfigurationsModuleTest.TestApplication::class)
 class PerformanceMetricsConfigurationsModuleTest {
-  @get:Rule
-  val oppiaTestRule = OppiaTestRule()
 
   @JvmField
   @field:[Inject MediumMemoryTierUpperBound]
@@ -104,9 +98,7 @@ class PerformanceMetricsConfigurationsModuleTest {
       TestModule::class
     ]
   )
-  interface TestApplicationComponent :
-    DataProvidersInjector,
-    PlatformParameterInitializationInjector {
+  interface TestApplicationComponent : DataProvidersInjector {
     @Component.Builder
     interface Builder {
       @BindsInstance
@@ -117,10 +109,7 @@ class PerformanceMetricsConfigurationsModuleTest {
     fun inject(test: PerformanceMetricsConfigurationsModuleTest)
   }
 
-  class TestApplication :
-    Application(),
-    DataProvidersInjectorProvider,
-    PlatformParameterInitializationInjectorProvider {
+  class TestApplication : Application(), DataProvidersInjectorProvider {
     private val component: TestApplicationComponent by lazy {
       DaggerPerformanceMetricsConfigurationsModuleTest_TestApplicationComponent.builder()
         .setApplication(this)
@@ -132,7 +121,5 @@ class PerformanceMetricsConfigurationsModuleTest {
     }
 
     override fun getDataProvidersInjector(): DataProvidersInjector = component
-
-    override fun getPlatformParameterInitializationInjector() = component
   }
 }

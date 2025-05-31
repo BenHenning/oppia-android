@@ -33,9 +33,6 @@ import org.oppia.android.data.persistence.PersistentCacheStore.PublishMode.PUBLI
 import org.oppia.android.data.persistence.PersistentCacheStore.UpdateMode.UPDATE_ALWAYS
 import org.oppia.android.data.persistence.PersistentCacheStore.UpdateMode.UPDATE_IF_NEW_CACHE
 import org.oppia.android.data.persistence.PersistentCacheStoreTest.SubscriptionCallback.Companion.toAsyncChange
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjector
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjectorProvider
-import org.oppia.android.testing.OppiaTestRule
 import org.oppia.android.testing.TestLogReportingModule
 import org.oppia.android.testing.data.AsyncResultSubject.Companion.assertThat
 import org.oppia.android.testing.data.DataProviderTestMonitor
@@ -93,9 +90,6 @@ class PersistentCacheStoreTest {
       this.strValue = strValue
     }.build()
   }
-
-  @get:Rule
-  val oppiaTestRule = OppiaTestRule()
 
   @Rule
   @JvmField
@@ -1711,9 +1705,7 @@ class PersistentCacheStoreTest {
       TestModule::class
     ]
   )
-  interface TestApplicationComponent :
-    DataProvidersInjector,
-    PlatformParameterInitializationInjector {
+  interface TestApplicationComponent : DataProvidersInjector {
     @Component.Builder
     interface Builder {
       @BindsInstance
@@ -1725,10 +1717,7 @@ class PersistentCacheStoreTest {
     fun inject(persistentCacheStoreTest: PersistentCacheStoreTest)
   }
 
-  class TestApplication :
-    Application(),
-    DataProvidersInjectorProvider,
-    PlatformParameterInitializationInjectorProvider {
+  class TestApplication : Application(), DataProvidersInjectorProvider {
     private val component: TestApplicationComponent by lazy {
       DaggerPersistentCacheStoreTest_TestApplicationComponent.builder()
         .setApplication(this)
@@ -1740,8 +1729,6 @@ class PersistentCacheStoreTest {
     }
 
     override fun getDataProvidersInjector(): DataProvidersInjector = component
-
-    override fun getPlatformParameterInitializationInjector() = component
   }
 
   interface SubscriptionCallback {

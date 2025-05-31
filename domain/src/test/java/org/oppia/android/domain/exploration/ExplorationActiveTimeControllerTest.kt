@@ -9,14 +9,10 @@ import dagger.BindsInstance
 import dagger.Component
 import dagger.Module
 import dagger.Provides
-import org.junit.Rule
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.oppia.android.app.model.FeatureFlagId.NPS_SURVEY
 import org.oppia.android.app.model.ProfileId
-import org.oppia.android.data.backends.gae.RetrofitModule
-import org.oppia.android.data.backends.gae.RetrofitServiceModule
-import org.oppia.android.data.backends.gae.testing.NetworkConfigTestModule
 import org.oppia.android.domain.classify.InteractionsModule
 import org.oppia.android.domain.classify.rules.algebraicexpressioninput.AlgebraicExpressionInputModule
 import org.oppia.android.domain.classify.rules.continueinteraction.ContinueModule
@@ -40,21 +36,16 @@ import org.oppia.android.domain.oppialogger.LoggingIdentifierModule
 import org.oppia.android.domain.oppialogger.analytics.ApplicationLifecycleModule
 import org.oppia.android.domain.oppialogger.analytics.ApplicationLifecycleObserver
 import org.oppia.android.domain.oppialogger.analytics.CpuPerformanceSnapshotterModule
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjector
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjectorProvider
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterTestInitializer
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterTestModule
-import org.oppia.android.domain.platformparameter.testing.TestPlatformParameterConfigRetriever
+import org.oppia.android.domain.platformparameter.PlatformParameterSingletonModule
 import org.oppia.android.domain.topic.TEST_EXPLORATION_ID_2
 import org.oppia.android.domain.topic.TEST_STORY_ID_0
 import org.oppia.android.domain.topic.TEST_TOPIC_ID_0
 import org.oppia.android.domain.topic.TEST_TOPIC_ID_1
-import org.oppia.android.testing.EnableFeatureFlag
-import org.oppia.android.testing.OppiaTestRule
 import org.oppia.android.testing.TestLogReportingModule
 import org.oppia.android.testing.assertThrows
 import org.oppia.android.testing.data.DataProviderTestMonitor
 import org.oppia.android.testing.environment.TestEnvironmentConfig
+import org.oppia.android.testing.platformparameter.TestPlatformParameterModule
 import org.oppia.android.testing.robolectric.RobolectricModule
 import org.oppia.android.testing.threading.TestCoroutineDispatchers
 import org.oppia.android.testing.threading.TestDispatcherModule
@@ -85,10 +76,7 @@ private const val SESSION_LENGTH_3 = 100000L
 @RunWith(AndroidJUnit4::class)
 @LooperMode(LooperMode.Mode.PAUSED)
 @Config(application = ExplorationActiveTimeControllerTest.TestApplication::class)
-@EnableFeatureFlag(NPS_SURVEY)
 class ExplorationActiveTimeControllerTest {
-  @get:Rule val oppiaTestRule = OppiaTestRule()
-
   @Inject
   lateinit var testCoroutineDispatchers: TestCoroutineDispatchers
 
@@ -109,6 +97,11 @@ class ExplorationActiveTimeControllerTest {
 
   private val firstTestProfile = ProfileId.newBuilder().setInternalId(0).build()
   private val secondTestProfile = ProfileId.newBuilder().setInternalId(1).build()
+
+  @Before
+  fun setUp() {
+    TestPlatformParameterModule.forceEnableNpsSurvey(true)
+  }
 
   @Test
   fun testSessionTimer_explorationStartedCallbackReceived_startsSessionTimer() {
@@ -515,9 +508,11 @@ class ExplorationActiveTimeControllerTest {
     // can behave like a real Android application class (per Robolectric) without having a shared
     // Dagger dependency graph with the application under test.
     testApplication.attachBaseContext(ApplicationProvider.getApplicationContext())
-    testApplication.component.getPlatformParameterTestInitializer() // Ensure parameters are inited.
-    block(testApplication.component)
-    TestPlatformParameterConfigRetriever.reset()
+    block(
+      DaggerExplorationActiveTimeControllerTest_TestApplicationComponent.builder()
+        .setApplication(testApplication)
+        .build()
+    )
   }
 
   private fun setUpTestApplicationComponent() {
@@ -576,27 +571,22 @@ class ExplorationActiveTimeControllerTest {
       LoggingIdentifierModule::class,
       MathEquationInputModule::class,
       MultipleChoiceInputModule::class,
-      NetworkConfigTestModule::class,
       NetworkConnectionUtilDebugModule::class,
       NumberWithUnitsRuleModule::class,
       NumericExpressionInputModule::class,
       NumericInputRuleModule::class,
-      PlatformParameterTestModule::class,
-      QuestionModule::class,
+      PlatformParameterSingletonModule::class,
       RatioInputModule::class,
-      RetrofitModule::class,
-      RetrofitServiceModule::class,
       RobolectricModule::class,
       SyncStatusModule::class,
       TestDispatcherModule::class,
       TestLogReportingModule::class,
       TestModule::class,
+      TestPlatformParameterModule::class,
       TextInputRuleModule::class
     ]
   )
-  interface TestApplicationComponent :
-    DataProvidersInjector,
-    PlatformParameterInitializationInjector {
+  interface TestApplicationComponent : DataProvidersInjector {
     @Component.Builder
     interface Builder {
       @BindsInstance
@@ -607,18 +597,15 @@ class ExplorationActiveTimeControllerTest {
 
     fun inject(explorationActiveTimeControllerTest: ExplorationActiveTimeControllerTest)
 
-    fun getPlatformParameterTestInitializer(): PlatformParameterTestInitializer
-
     fun getExplorationActiveTimeController(): ExplorationActiveTimeController
+
+    fun getTestCoroutineDispatchers(): TestCoroutineDispatchers
 
     fun getOppiaClock(): FakeOppiaClock
   }
 
-  class TestApplication :
-    Application(),
-    DataProvidersInjectorProvider,
-    PlatformParameterInitializationInjectorProvider {
-    val component: TestApplicationComponent by lazy {
+  class TestApplication : Application(), DataProvidersInjectorProvider {
+    private val component: TestApplicationComponent by lazy {
       DaggerExplorationActiveTimeControllerTest_TestApplicationComponent.builder()
         .setApplication(this)
         .build()
@@ -633,7 +620,5 @@ class ExplorationActiveTimeControllerTest {
     }
 
     override fun getDataProvidersInjector(): DataProvidersInjector = component
-
-    override fun getPlatformParameterInitializationInjector() = component
   }
 }

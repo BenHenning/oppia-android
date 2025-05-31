@@ -11,14 +11,12 @@ import dagger.Module
 import dagger.Provides
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.oppia.android.data.backends.gae.RetrofitModule
 import org.oppia.android.data.backends.gae.RetrofitServiceModule
 import org.oppia.android.data.backends.gae.testing.FeedbackReportingServiceTestOrchestrator
 import org.oppia.android.data.backends.gae.testing.NetworkConfigTestModule
-import org.oppia.android.testing.OppiaTestRule
 import org.oppia.android.testing.robolectric.RobolectricModule
 import org.oppia.android.testing.threading.TestDispatcherModule
 import org.robolectric.annotation.Config
@@ -38,8 +36,6 @@ import javax.inject.Singleton
 // Function name: test names are conventionally named with underscores.
 @Suppress("FunctionName")
 class FeedbackReportingServiceTest {
-  @get:Rule val oppiaTestRule = OppiaTestRule()
-
   @Inject lateinit var feedbackReportingService: FeedbackReportingService
   @Inject lateinit var serviceOrchestrator: FeedbackReportingServiceTestOrchestrator
   @Inject lateinit var mockWebServer: MockWebServer

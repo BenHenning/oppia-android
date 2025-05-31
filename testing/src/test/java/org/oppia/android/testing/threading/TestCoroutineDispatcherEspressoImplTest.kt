@@ -10,15 +10,11 @@ import dagger.Component
 import dagger.Module
 import dagger.Provides
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.timeout
 import org.mockito.Mockito.verify
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjector
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjectorProvider
-import org.oppia.android.testing.OppiaTestRule
 import org.oppia.android.testing.TestLogReportingModule
 import org.oppia.android.testing.robolectric.IsOnRobolectric
 import org.oppia.android.util.data.DataProvidersInjector
@@ -49,9 +45,6 @@ class TestCoroutineDispatcherEspressoImplTest : TestCoroutineDispatcherTestBase(
   longTaskDelayMillis = 15000L,
   longTaskDelayDeltaCheckMillis = 1000L
 ) {
-  @get:Rule
-  val oppiaTestRule = OppiaTestRule()
-
   @Before
   override fun setUp() {
     setUpTestApplicationComponent()
@@ -161,9 +154,7 @@ class TestCoroutineDispatcherEspressoImplTest : TestCoroutineDispatcherTestBase(
       TestModule::class
     ]
   )
-  interface TestApplicationComponent :
-    DataProvidersInjector,
-    PlatformParameterInitializationInjector {
+  interface TestApplicationComponent : DataProvidersInjector {
     @Component.Builder
     interface Builder {
       @BindsInstance
@@ -174,10 +165,7 @@ class TestCoroutineDispatcherEspressoImplTest : TestCoroutineDispatcherTestBase(
     fun inject(test: TestCoroutineDispatcherEspressoImplTest)
   }
 
-  class TestApplication :
-    Application(),
-    DataProvidersInjectorProvider,
-    PlatformParameterInitializationInjectorProvider {
+  class TestApplication : Application(), DataProvidersInjectorProvider {
     private val component: TestApplicationComponent by lazy {
       DaggerTestCoroutineDispatcherEspressoImplTest_TestApplicationComponent.builder()
         .setApplication(this)
@@ -189,7 +177,5 @@ class TestCoroutineDispatcherEspressoImplTest : TestCoroutineDispatcherTestBase(
     }
 
     override fun getDataProvidersInjector(): DataProvidersInjector = component
-
-    override fun getPlatformParameterInitializationInjector() = component
   }
 }

@@ -7,13 +7,11 @@ import com.google.common.truth.Truth.assertThat
 import dagger.BindsInstance
 import dagger.Component
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.oppia.android.domain.classify.ClassificationContext
 import org.oppia.android.domain.classify.InteractionObjectTestBuilder.createListOfSetsOfTranslatableHtmlContentIds
 import org.oppia.android.domain.classify.RuleClassifier
-import org.oppia.android.testing.OppiaTestRule
 import org.oppia.android.testing.assertThrows
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.LooperMode
@@ -26,8 +24,6 @@ import javax.inject.Singleton
 @LooperMode(LooperMode.Mode.PAUSED)
 @Config(manifest = Config.NONE)
 class DragDropSortInputIsEqualToOrderingClassifierProviderTest {
-  @get:Rule
-  val oppiaTestRule = OppiaTestRule()
 
   private val ITEM_SET_1_ITEM_1 = listOf("content_id_1")
   private val ITEM_SET_1_ITEMS_12 = listOf("content_id_1", "content_id_2")

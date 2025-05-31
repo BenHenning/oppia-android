@@ -2,11 +2,9 @@ package org.oppia.android.util.math
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
-import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.oppia.android.app.model.Fraction
-import org.oppia.android.testing.OppiaTestRule
 import org.oppia.android.testing.assertThrows
 import org.oppia.android.testing.math.FractionSubject.Companion.assertThat
 import org.robolectric.annotation.LooperMode
@@ -107,9 +105,6 @@ class FractionExtensionsTest {
       denominator = 1
     }.build()
   }
-
-  @get:Rule
-  val oppiaTestRule = OppiaTestRule()
 
   @Test
   fun testHasFractionalPart_zeroFraction_returnsFalse() {

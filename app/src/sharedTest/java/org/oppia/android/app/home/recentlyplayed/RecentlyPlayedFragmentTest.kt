@@ -51,7 +51,6 @@ import org.oppia.android.app.home.RouteToExplorationListener
 import org.oppia.android.app.model.ExplorationActivityParams
 import org.oppia.android.app.model.ExplorationActivityParams.ParentScreen.PARENT_SCREEN_UNSPECIFIED
 import org.oppia.android.app.model.ExplorationCheckpoint
-import org.oppia.android.app.model.FeatureFlagId.MULTIPLE_CLASSROOMS
 import org.oppia.android.app.model.ProfileId
 import org.oppia.android.app.player.state.itemviewmodel.SplitScreenInteractionModule
 import org.oppia.android.app.recyclerview.RecyclerViewMatcher.Companion.atPositionOnView
@@ -93,16 +92,12 @@ import org.oppia.android.domain.oppialogger.analytics.ApplicationLifecycleModule
 import org.oppia.android.domain.oppialogger.analytics.CpuPerformanceSnapshotterModule
 import org.oppia.android.domain.oppialogger.logscheduler.MetricLogSchedulerModule
 import org.oppia.android.domain.oppialogger.loguploader.LogReportWorkerModule
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjector
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjectorProvider
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterTestModule
+import org.oppia.android.domain.platformparameter.PlatformParameterSingletonModule
 import org.oppia.android.domain.question.QuestionModule
 import org.oppia.android.domain.topic.FRACTIONS_EXPLORATION_ID_0
 import org.oppia.android.domain.topic.FRACTIONS_STORY_ID_0
 import org.oppia.android.domain.topic.FRACTIONS_TOPIC_ID
 import org.oppia.android.domain.workmanager.WorkManagerConfigurationModule
-import org.oppia.android.testing.DisableFeatureFlag
-import org.oppia.android.testing.EnableFeatureFlag
 import org.oppia.android.testing.OppiaTestRule
 import org.oppia.android.testing.TestImageLoaderModule
 import org.oppia.android.testing.TestLogReportingModule
@@ -111,6 +106,7 @@ import org.oppia.android.testing.junit.InitializeDefaultLocaleRule
 import org.oppia.android.testing.lightweightcheckpointing.ExplorationCheckpointTestHelper
 import org.oppia.android.testing.lightweightcheckpointing.FRACTIONS_STORY_0_EXPLORATION_0_CURRENT_VERSION
 import org.oppia.android.testing.mockito.capture
+import org.oppia.android.testing.platformparameter.TestPlatformParameterModule
 import org.oppia.android.testing.profile.ProfileTestHelper
 import org.oppia.android.testing.robolectric.RobolectricModule
 import org.oppia.android.testing.story.StoryProgressTestHelper
@@ -161,26 +157,13 @@ class RecentlyPlayedFragmentTest {
   @Captor lateinit var explorationCheckpointCaptor: ArgumentCaptor<ExplorationCheckpoint>
   @Captor lateinit var isCheckpointingEnabledCaptor: ArgumentCaptor<Boolean>
 
-  @Inject
-  lateinit var profileTestHelper: ProfileTestHelper
-
-  @Inject
-  lateinit var storyProgressTestHelper: StoryProgressTestHelper
-
-  @Inject
-  lateinit var context: Context
-
-  @Inject
-  lateinit var testCoroutineDispatchers: TestCoroutineDispatchers
-
-  @Inject
-  lateinit var fakeOppiaClock: FakeOppiaClock
-
-  @Inject
-  lateinit var explorationCheckpointTestHelper: ExplorationCheckpointTestHelper
-
-  @Inject
-  lateinit var fakeExplorationRetriever: FakeExplorationRetriever
+  @Inject lateinit var profileTestHelper: ProfileTestHelper
+  @Inject lateinit var storyProgressTestHelper: StoryProgressTestHelper
+  @Inject lateinit var context: Context
+  @Inject lateinit var testCoroutineDispatchers: TestCoroutineDispatchers
+  @Inject lateinit var fakeOppiaClock: FakeOppiaClock
+  @Inject lateinit var explorationCheckpointTestHelper: ExplorationCheckpointTestHelper
+  @Inject lateinit var fakeExplorationRetriever: FakeExplorationRetriever
 
   private val internalProfileId = 0
   private lateinit var profileId: ProfileId
@@ -325,8 +308,8 @@ class RecentlyPlayedFragmentTest {
   }
 
   @Test
-  @DisableFeatureFlag(MULTIPLE_CLASSROOMS)
   fun testFragment_disableClassrooms_recommendedSection_classroomNameIsNotDisplayed() {
+    TestPlatformParameterModule.forceEnableMultipleClassrooms(false)
     fakeOppiaClock.setFakeTimeMode(FakeOppiaClock.FakeTimeMode.MODE_UPTIME_MILLIS)
     storyProgressTestHelper.markInProgressSavedFractionsStory0Exp0(
       profileId = profileId,
@@ -349,8 +332,8 @@ class RecentlyPlayedFragmentTest {
   }
 
   @Test
-  @EnableFeatureFlag(MULTIPLE_CLASSROOMS)
   fun testFragment_enableClassrooms_recommendedSection_classroomNameIsCorrect() {
+    TestPlatformParameterModule.forceEnableMultipleClassrooms(true)
     fakeOppiaClock.setFakeTimeMode(FakeOppiaClock.FakeTimeMode.MODE_UPTIME_MILLIS)
     storyProgressTestHelper.markInProgressSavedFractionsStory0Exp0(
       profileId = profileId,
@@ -679,8 +662,8 @@ class RecentlyPlayedFragmentTest {
   }
 
   @Test
-  @DisableFeatureFlag(MULTIPLE_CLASSROOMS)
   fun testFragment_disableClassrooms_classroomNameIsNotDisplayed() {
+    TestPlatformParameterModule.forceEnableMultipleClassrooms(false)
     fakeOppiaClock.setFakeTimeMode(FakeOppiaClock.FakeTimeMode.MODE_UPTIME_MILLIS)
     storyProgressTestHelper.markInProgressSavedFractionsStory0Exp0(
       profileId = profileId,
@@ -707,8 +690,8 @@ class RecentlyPlayedFragmentTest {
   }
 
   @Test
-  @EnableFeatureFlag(MULTIPLE_CLASSROOMS)
   fun testFragment_enableClassrooms_classroomNameIsCorrect() {
+    TestPlatformParameterModule.forceEnableMultipleClassrooms(true)
     fakeOppiaClock.setFakeTimeMode(FakeOppiaClock.FakeTimeMode.MODE_UPTIME_MILLIS)
     storyProgressTestHelper.markInProgressSavedFractionsStory0Exp0(
       profileId = profileId,
@@ -1117,8 +1100,8 @@ class RecentlyPlayedFragmentTest {
   }
 
   @Test
-  @DisableFeatureFlag(MULTIPLE_CLASSROOMS)
   fun testFragment_disableClassrooms_configChange_classroomNameIsNotDisplayed() {
+    TestPlatformParameterModule.forceEnableMultipleClassrooms(false)
     fakeOppiaClock.setFakeTimeMode(FakeOppiaClock.FakeTimeMode.MODE_UPTIME_MILLIS)
     storyProgressTestHelper.markInProgressSavedFractionsStory0Exp0(
       profileId = profileId,
@@ -1146,8 +1129,8 @@ class RecentlyPlayedFragmentTest {
   }
 
   @Test
-  @EnableFeatureFlag(MULTIPLE_CLASSROOMS)
   fun testFragment_enableClassrooms_configChange_classroomNameIsCorrect() {
+    TestPlatformParameterModule.forceEnableMultipleClassrooms(true)
     fakeOppiaClock.setFakeTimeMode(FakeOppiaClock.FakeTimeMode.MODE_UPTIME_MILLIS)
     storyProgressTestHelper.markInProgressSavedFractionsStory0Exp0(
       profileId = profileId,
@@ -1474,7 +1457,7 @@ class RecentlyPlayedFragmentTest {
       NumberWithUnitsRuleModule::class,
       NumericExpressionInputModule::class,
       NumericInputRuleModule::class,
-      PlatformParameterTestModule::class,
+      PlatformParameterSingletonModule::class,
       QuestionModule::class,
       RatioInputModule::class,
       RetrofitModule::class,
@@ -1486,15 +1469,14 @@ class RecentlyPlayedFragmentTest {
       TestDispatcherModule::class,
       TestImageLoaderModule::class,
       TestLogReportingModule::class,
+      TestPlatformParameterModule::class,
       TestingBuildFlavorModule::class,
       TextInputRuleModule::class,
       ViewBindingShimModule::class,
       WorkManagerConfigurationModule::class
     ]
   )
-  interface TestApplicationComponent :
-    ApplicationComponent,
-    PlatformParameterInitializationInjector {
+  interface TestApplicationComponent : ApplicationComponent {
     @Component.Builder
     interface Builder : ApplicationComponent.Builder {
       override fun build(): TestApplicationComponent
@@ -1503,11 +1485,7 @@ class RecentlyPlayedFragmentTest {
     fun inject(recentlyPlayedFragmentTest: RecentlyPlayedFragmentTest)
   }
 
-  class TestApplication :
-    Application(),
-    ActivityComponentFactory,
-    ApplicationInjectorProvider,
-    PlatformParameterInitializationInjectorProvider {
+  class TestApplication : Application(), ActivityComponentFactory, ApplicationInjectorProvider {
     private val component: TestApplicationComponent by lazy {
       DaggerRecentlyPlayedFragmentTest_TestApplicationComponent.builder()
         .setApplication(this)
@@ -1523,7 +1501,5 @@ class RecentlyPlayedFragmentTest {
     }
 
     override fun getApplicationInjector(): ApplicationInjector = component
-
-    override fun getPlatformParameterInitializationInjector() = component
   }
 }

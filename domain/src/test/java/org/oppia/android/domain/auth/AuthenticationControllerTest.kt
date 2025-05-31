@@ -22,19 +22,16 @@ import org.mockito.Mockito.verifyNoInteractions
 import org.mockito.junit.MockitoJUnit
 import org.mockito.junit.MockitoRule
 import org.oppia.android.domain.oppialogger.analytics.ApplicationLifecycleModule
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjector
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjectorProvider
-import org.oppia.android.testing.OppiaTestRule
 import org.oppia.android.testing.TestLogReportingModule
 import org.oppia.android.testing.firebase.FakeFirebaseAuthWrapperImpl
 import org.oppia.android.testing.firebase.TestAuthenticationModule
 import org.oppia.android.testing.mockito.capture
 import org.oppia.android.testing.robolectric.RobolectricModule
-import org.oppia.android.testing.threading.TestDispatcherModule
 import org.oppia.android.testing.time.FakeOppiaClockModule
 import org.oppia.android.util.data.DataProvidersInjector
 import org.oppia.android.util.data.DataProvidersInjectorProvider
 import org.oppia.android.util.threading.BackgroundDispatcher
+import org.oppia.android.util.threading.DispatcherModule
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.LooperMode
 import javax.inject.Inject
@@ -47,9 +44,6 @@ import javax.inject.Singleton
 @LooperMode(LooperMode.Mode.PAUSED)
 @Config(application = AuthenticationControllerTest.TestApplication::class)
 class AuthenticationControllerTest {
-  @get:Rule
-  val oppiaTestRule = OppiaTestRule()
-
   @field:[Rule JvmField] val mockitoRule: MockitoRule = MockitoJUnit.rule()
 
   @Inject lateinit var firebaseAuthWrapper: FirebaseAuthWrapper
@@ -130,14 +124,11 @@ class AuthenticationControllerTest {
       FakeOppiaClockModule::class,
       RobolectricModule::class,
       TestAuthenticationModule::class,
-      TestDispatcherModule::class,
       TestLogReportingModule::class,
       TestModule::class
     ]
   )
-  interface TestApplicationComponent :
-    DataProvidersInjector,
-    PlatformParameterInitializationInjector {
+  interface TestApplicationComponent : DataProvidersInjector {
     @Component.Builder
     interface Builder {
       @BindsInstance
@@ -149,10 +140,7 @@ class AuthenticationControllerTest {
     fun inject(test: AuthenticationControllerTest)
   }
 
-  class TestApplication :
-    Application(),
-    DataProvidersInjectorProvider,
-    PlatformParameterInitializationInjectorProvider {
+  class TestApplication : Application(), DataProvidersInjectorProvider {
     private val component: TestApplicationComponent by lazy {
       DaggerAuthenticationControllerTest_TestApplicationComponent.builder()
         .setApplication(this)
@@ -164,8 +152,6 @@ class AuthenticationControllerTest {
     }
 
     override fun getDataProvidersInjector(): DataProvidersInjector = component
-
-    override fun getPlatformParameterInitializationInjector() = component
   }
 
   interface FakeSuccessCallback { fun onSuccess() }

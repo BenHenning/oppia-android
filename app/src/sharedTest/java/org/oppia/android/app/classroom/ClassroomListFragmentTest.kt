@@ -24,7 +24,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import dagger.Component
 import org.junit.After
-import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -53,7 +52,6 @@ import org.oppia.android.app.model.EventLog
 import org.oppia.android.app.model.EventLog.Context.ActivityContextCase.COMPLETE_APP_ONBOARDING
 import org.oppia.android.app.model.EventLog.Context.ActivityContextCase.END_PROFILE_ONBOARDING_EVENT
 import org.oppia.android.app.model.EventLog.Context.ActivityContextCase.OPEN_HOME
-import org.oppia.android.app.model.FeatureFlagId.ONBOARDING_FLOW_V2
 import org.oppia.android.app.model.ProfileId
 import org.oppia.android.app.model.ProfileType
 import org.oppia.android.app.model.TopicActivityParams
@@ -95,17 +93,13 @@ import org.oppia.android.domain.oppialogger.analytics.ApplicationLifecycleModule
 import org.oppia.android.domain.oppialogger.analytics.CpuPerformanceSnapshotterModule
 import org.oppia.android.domain.oppialogger.logscheduler.MetricLogSchedulerModule
 import org.oppia.android.domain.oppialogger.loguploader.LogReportWorkerModule
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjector
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjectorProvider
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterTestModule
+import org.oppia.android.domain.platformparameter.PlatformParameterSingletonModule
 import org.oppia.android.domain.question.QuestionModule
 import org.oppia.android.domain.topic.FRACTIONS_STORY_ID_0
 import org.oppia.android.domain.topic.FRACTIONS_TOPIC_ID
 import org.oppia.android.domain.topic.TEST_STORY_ID_0
 import org.oppia.android.domain.topic.TEST_TOPIC_ID_0
 import org.oppia.android.domain.workmanager.WorkManagerConfigurationModule
-import org.oppia.android.testing.DisableFeatureFlag
-import org.oppia.android.testing.EnableFeatureFlag
 import org.oppia.android.testing.FakeAnalyticsEventLogger
 import org.oppia.android.testing.OppiaTestRule
 import org.oppia.android.testing.TestImageLoaderModule
@@ -113,6 +107,7 @@ import org.oppia.android.testing.TestLogReportingModule
 import org.oppia.android.testing.data.DataProviderTestMonitor
 import org.oppia.android.testing.firebase.TestAuthenticationModule
 import org.oppia.android.testing.junit.InitializeDefaultLocaleRule
+import org.oppia.android.testing.platformparameter.TestPlatformParameterModule
 import org.oppia.android.testing.profile.ProfileTestHelper
 import org.oppia.android.testing.robolectric.RobolectricModule
 import org.oppia.android.testing.story.StoryProgressTestHelper
@@ -195,20 +190,16 @@ class ClassroomListFragmentTest {
   private val internalProfileId: Int = 0
   private val profileId = ProfileId.newBuilder().setInternalId(internalProfileId).build()
 
-  @Before
-  fun setUp() {
-    setUpTestApplicationComponent()
-  }
-
   @After
   fun tearDown() {
+    TestPlatformParameterModule.reset()
     testCoroutineDispatchers.unregisterIdlingResource()
     scenario.close()
   }
 
   @Test
-  @DisableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testFragment_onboardingV1Enabled_onLaunch_logsOpenHomeEvent() {
+    setUpTestApplicationComponent(onboardingV2Enabled = false)
     scenario = ActivityScenario.launch(ClassroomListActivity::class.java)
     testCoroutineDispatchers.runCurrent()
     val event = fakeAnalyticsEventLogger.getOldestEvent()
@@ -218,8 +209,8 @@ class ClassroomListFragmentTest {
   }
 
   @Test
-  @EnableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testFragment_onboardingV2Enabled_onLaunch_logsOpenHomeEvent() {
+    setUpTestApplicationComponent(onboardingV2Enabled = true)
     scenario = ActivityScenario.launch(ClassroomListActivity::class.java)
     testCoroutineDispatchers.runCurrent()
 
@@ -230,8 +221,8 @@ class ClassroomListFragmentTest {
   }
 
   @Test
-  @EnableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testFragment_onboardingV2_soleLearner_onInitialLaunch_logsEndProfileOnboardingEvent() {
+    setUpTestApplicationComponent(onboardingV2Enabled = true)
     scenario = ActivityScenario.launch(ClassroomListActivity::class.java)
 
     profileTestHelper.addOnlyAdminProfileWithoutPin()
@@ -247,8 +238,8 @@ class ClassroomListFragmentTest {
   }
 
   @Test
-  @EnableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testFragment_onboardingV2_supervisorProfile_onInitialLaunch_logsEndProfileOnboardingEvent() {
+    setUpTestApplicationComponent(onboardingV2Enabled = true)
     scenario = ActivityScenario.launch(ClassroomListActivity::class.java)
 
     profileTestHelper.addOnlyAdminProfileWithoutPin()
@@ -264,8 +255,8 @@ class ClassroomListFragmentTest {
   }
 
   @Test
-  @EnableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testFragment_onboardingV2_nonAdminProfile_onInitialLaunch_logsEndProfileOnboardingEvent() {
+    setUpTestApplicationComponent(onboardingV2Enabled = true)
     scenario = ActivityScenario.launch(ClassroomListActivity::class.java)
 
     profileTestHelper.addOnlyAdminProfileWithoutPin()
@@ -281,8 +272,9 @@ class ClassroomListFragmentTest {
   }
 
   @Test
-  @EnableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testFragment_onboardingV2_soleLearner_onInitialLaunch_logsAppOnboardingEvent() {
+    setUpTestApplicationComponent(onboardingV2Enabled = true)
+
     profileTestHelper.addOnlyAdminProfileWithoutPin()
     profileTestHelper.updateProfileType(
       profileId = profileId, profileType = ProfileType.SOLE_LEARNER
@@ -301,8 +293,9 @@ class ClassroomListFragmentTest {
   }
 
   @Test
-  @EnableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testFragment_onboardingV2_supervisorProfile_onInitialLaunch_logsAppOnboardingEvent() {
+    setUpTestApplicationComponent(onboardingV2Enabled = true)
+
     profileTestHelper.addOnlyAdminProfileWithoutPin()
     profileTestHelper.updateProfileType(
       profileId = profileId, profileType = ProfileType.SUPERVISOR
@@ -321,8 +314,9 @@ class ClassroomListFragmentTest {
   }
 
   @Test
-  @EnableFeatureFlag(ONBOARDING_FLOW_V2)
   fun testFragment_onboardingV2_nonAdmin_onInitialLaunch_doesNotLogAppOnboardingEvent() {
+    setUpTestApplicationComponent(onboardingV2Enabled = true)
+
     profileTestHelper.addOnlyAdminProfileWithoutPin()
     profileTestHelper.updateProfileType(
       profileId = profileId, profileType = ProfileType.ADDITIONAL_LEARNER
@@ -342,6 +336,7 @@ class ClassroomListFragmentTest {
 
   @Test
   fun testFragment_allComponentsAreDisplayed() {
+    setUpTestApplicationComponent()
     scenario = ActivityScenario.launch(ClassroomListActivity::class.java)
     testCoroutineDispatchers.runCurrent()
 
@@ -353,6 +348,7 @@ class ClassroomListFragmentTest {
 
   @Test
   fun testFragment_loginTwice_allComponentsAreDisplayed() {
+    setUpTestApplicationComponent()
     logIntoAdminTwice()
     scenario = ActivityScenario.launch(ClassroomListActivity::class.java)
     testCoroutineDispatchers.runCurrent()
@@ -371,6 +367,7 @@ class ClassroomListFragmentTest {
 
   @Test
   fun testFragment_withAdminProfile_configChange_profileNameIsDisplayed() {
+    setUpTestApplicationComponent()
     fakeOppiaClock.setFakeTimeMode(FakeOppiaClock.FakeTimeMode.MODE_FIXED_FAKE_TIME)
     fakeOppiaClock.setCurrentTimeToSameDateTime(EVENING_TIMESTAMP)
 
@@ -389,6 +386,7 @@ class ClassroomListFragmentTest {
 
   @Test
   fun testFragment_morningTimestamp_goodMorningMessageIsDisplayed_withAdminProfileName() {
+    setUpTestApplicationComponent()
     scenario = ActivityScenario.launch(ClassroomListActivity::class.java)
     fakeOppiaClock.setFakeTimeMode(FakeOppiaClock.FakeTimeMode.MODE_FIXED_FAKE_TIME)
     fakeOppiaClock.setCurrentTimeToSameDateTime(MORNING_TIMESTAMP)
@@ -403,6 +401,7 @@ class ClassroomListFragmentTest {
 
   @Test
   fun testFragment_afternoonTimestamp_goodAfternoonMessageIsDisplayed_withAdminProfileName() {
+    setUpTestApplicationComponent()
     scenario = ActivityScenario.launch(ClassroomListActivity::class.java)
     fakeOppiaClock.setFakeTimeMode(FakeOppiaClock.FakeTimeMode.MODE_FIXED_FAKE_TIME)
     fakeOppiaClock.setCurrentTimeToSameDateTime(AFTERNOON_TIMESTAMP)
@@ -417,6 +416,7 @@ class ClassroomListFragmentTest {
 
   @Test
   fun testFragment_eveningTimestamp_goodEveningMessageIsDisplayed_withAdminProfileName() {
+    setUpTestApplicationComponent()
     scenario = ActivityScenario.launch(ClassroomListActivity::class.java)
     fakeOppiaClock.setFakeTimeMode(FakeOppiaClock.FakeTimeMode.MODE_FIXED_FAKE_TIME)
     fakeOppiaClock.setCurrentTimeToSameDateTime(EVENING_TIMESTAMP)
@@ -431,6 +431,7 @@ class ClassroomListFragmentTest {
 
   @Test
   fun testFragment_logUserInFirstTime_checkPromotedStoriesIsNotDisplayed() {
+    setUpTestApplicationComponent()
     scenario = ActivityScenario.launch(ClassroomListActivity::class.java)
     composeRule.onNodeWithTag(PROMOTED_STORY_LIST_HEADER_TEST_TAG).assertDoesNotExist()
     composeRule.onNodeWithTag(PROMOTED_STORY_LIST_TEST_TAG).assertDoesNotExist()
@@ -438,6 +439,7 @@ class ClassroomListFragmentTest {
 
   @Test
   fun testFragment_recentlyPlayedStoriesTextIsDisplayed() {
+    setUpTestApplicationComponent()
     scenario = ActivityScenario.launch(ClassroomListActivity::class.java)
     logIntoAdminTwice()
     fakeOppiaClock.setFakeTimeMode(FakeOppiaClock.FakeTimeMode.MODE_UPTIME_MILLIS)
@@ -457,6 +459,7 @@ class ClassroomListFragmentTest {
 
   @Test
   fun testFragment_viewAllTextIsDisplayed() {
+    setUpTestApplicationComponent()
     scenario = ActivityScenario.launch(ClassroomListActivity::class.java)
     logIntoAdminTwice()
     fakeOppiaClock.setFakeTimeMode(FakeOppiaClock.FakeTimeMode.MODE_UPTIME_MILLIS)
@@ -482,6 +485,7 @@ class ClassroomListFragmentTest {
 
   @Test
   fun testFragment_storiesPlayedOneWeekAgo_displaysLastPlayedStoriesText() {
+    setUpTestApplicationComponent()
     scenario = ActivityScenario.launch(ClassroomListActivity::class.java)
     logIntoAdminTwice()
     fakeOppiaClock.setFakeTimeMode(FakeOppiaClock.FakeTimeMode.MODE_UPTIME_MILLIS)
@@ -502,6 +506,7 @@ class ClassroomListFragmentTest {
 
   @Test
   fun testFragment_markStory0DoneForFraction_displaysRecommendedStories() {
+    setUpTestApplicationComponent()
     scenario = ActivityScenario.launch(ClassroomListActivity::class.java)
     logIntoAdminTwice()
     fakeOppiaClock.setFakeTimeMode(FakeOppiaClock.FakeTimeMode.MODE_UPTIME_MILLIS)
@@ -531,6 +536,7 @@ class ClassroomListFragmentTest {
 
   @Test
   fun testFragment_markCompletedRatiosStory0_recommendsFractions() {
+    setUpTestApplicationComponent()
     scenario = ActivityScenario.launch(ClassroomListActivity::class.java)
     logIntoAdminTwice()
     fakeOppiaClock.setFakeTimeMode(FakeOppiaClock.FakeTimeMode.MODE_UPTIME_MILLIS)
@@ -552,6 +558,7 @@ class ClassroomListFragmentTest {
 
   @Test
   fun testFragment_noTopicProgress_initialRecommendationFractionsAndRatiosIsCorrect() {
+    setUpTestApplicationComponent()
     scenario = ActivityScenario.launch(ClassroomListActivity::class.java)
     logIntoAdminTwice()
 
@@ -576,6 +583,7 @@ class ClassroomListFragmentTest {
 
   @Test
   fun testFragment_forPromotedActivityList_hideViewAll() {
+    setUpTestApplicationComponent()
     scenario = ActivityScenario.launch(ClassroomListActivity::class.java)
     fakeOppiaClock.setFakeTimeMode(FakeOppiaClock.FakeTimeMode.MODE_UPTIME_MILLIS)
     storyProgressTestHelper.markInProgressSavedFractionsStory0Exp0(
@@ -592,6 +600,7 @@ class ClassroomListFragmentTest {
 
   @Test
   fun testFragment_markStory0DoneForRatiosAndFirstTestTopic_displaysSuggestedStories() {
+    setUpTestApplicationComponent()
     scenario = ActivityScenario.launch(ClassroomListActivity::class.java)
     logIntoAdminTwice()
     fakeOppiaClock.setFakeTimeMode(FakeOppiaClock.FakeTimeMode.MODE_UPTIME_MILLIS)
@@ -635,6 +644,7 @@ class ClassroomListFragmentTest {
    */
   @Test
   fun testFragment_markStory0DonePlayStory1FirstTestTopic_playFractionsTopic_orderIsCorrect() {
+    setUpTestApplicationComponent()
     scenario = ActivityScenario.launch(ClassroomListActivity::class.java)
     logIntoAdminTwice()
     fakeOppiaClock.setFakeTimeMode(FakeOppiaClock.FakeTimeMode.MODE_UPTIME_MILLIS)
@@ -679,6 +689,7 @@ class ClassroomListFragmentTest {
 
   @Test
   fun testFragment_markStory0DoneFirstTestTopic_suggestedStoriesIsCorrect() {
+    setUpTestApplicationComponent()
     scenario = ActivityScenario.launch(ClassroomListActivity::class.java)
     logIntoAdminTwice()
     fakeOppiaClock.setFakeTimeMode(FakeOppiaClock.FakeTimeMode.MODE_UPTIME_MILLIS)
@@ -700,6 +711,7 @@ class ClassroomListFragmentTest {
 
   @Test
   fun testFragment_markStory0DoneForFractions_recommendedStoriesIsCorrect() {
+    setUpTestApplicationComponent()
     scenario = ActivityScenario.launch(ClassroomListActivity::class.java)
     logIntoAdminTwice()
     fakeOppiaClock.setFakeTimeMode(FakeOppiaClock.FakeTimeMode.MODE_UPTIME_MILLIS)
@@ -730,6 +742,7 @@ class ClassroomListFragmentTest {
   @Test
   fun testFragment_clickViewAll_opensRecentlyPlayedActivity() {
     Intents.init()
+    setUpTestApplicationComponent()
 
     fakeOppiaClock.setFakeTimeMode(FakeOppiaClock.FakeTimeMode.MODE_UPTIME_MILLIS)
     storyProgressTestHelper.markInProgressSavedFractionsStory0Exp0(
@@ -759,6 +772,7 @@ class ClassroomListFragmentTest {
 
   @Test
   fun testFragment_markFullProgressForFractions_playRatios_displaysRecommendedStories() {
+    setUpTestApplicationComponent()
     scenario = ActivityScenario.launch(ClassroomListActivity::class.java)
     fakeOppiaClock.setFakeTimeMode(FakeOppiaClock.FakeTimeMode.MODE_UPTIME_MILLIS)
     storyProgressTestHelper.markInProgressSavedRatiosStory0Exp0(
@@ -794,6 +808,7 @@ class ClassroomListFragmentTest {
 
   @Test
   fun testFragment_markAtLeastOneStoryCompletedForAllTopics_displaysComingSoonTopicsList() {
+    setUpTestApplicationComponent()
     scenario = ActivityScenario.launch(ClassroomListActivity::class.java)
     logIntoAdminTwice()
     fakeOppiaClock.setFakeTimeMode(FakeOppiaClock.FakeTimeMode.MODE_UPTIME_MILLIS)
@@ -827,6 +842,7 @@ class ClassroomListFragmentTest {
 
   @Test
   fun testFragment_markFullProgressForSecondTestTopic_displaysComingSoonTopicsText() {
+    setUpTestApplicationComponent()
     scenario = ActivityScenario.launch(ClassroomListActivity::class.java)
     logIntoAdminTwice()
     fakeOppiaClock.setFakeTimeMode(FakeOppiaClock.FakeTimeMode.MODE_UPTIME_MILLIS)
@@ -848,6 +864,7 @@ class ClassroomListFragmentTest {
 
   @Test
   fun testFragment_markStory0OfRatiosAndTestTopics0And1Done_playTestTopicStory0_noPromotions() {
+    setUpTestApplicationComponent()
     scenario = ActivityScenario.launch(ClassroomListActivity::class.java)
     logIntoAdminTwice()
     fakeOppiaClock.setFakeTimeMode(FakeOppiaClock.FakeTimeMode.MODE_UPTIME_MILLIS)
@@ -883,6 +900,7 @@ class ClassroomListFragmentTest {
   @Test
   fun testFragment_clickPromotedStory_opensTopicActivity() {
     Intents.init()
+    setUpTestApplicationComponent()
     logIntoAdminTwice()
     fakeOppiaClock.setFakeTimeMode(FakeOppiaClock.FakeTimeMode.MODE_UPTIME_MILLIS)
     storyProgressTestHelper.markInProgressSavedFractionsStory0Exp0(
@@ -912,6 +930,7 @@ class ClassroomListFragmentTest {
   @Test
   fun testFragment_clickTopicSummary_opensTopicActivityThroughPlayIntent() {
     Intents.init()
+    setUpTestApplicationComponent()
     scenario = ActivityScenario.launch(ClassroomListActivity::class.java)
     testCoroutineDispatchers.runCurrent()
 
@@ -937,6 +956,7 @@ class ClassroomListFragmentTest {
 
   @Test
   fun testFragment_scrollToBottom_classroomListSticks_classroomListIsVisible() {
+    setUpTestApplicationComponent()
     scenario = ActivityScenario.launch(ClassroomListActivity::class.java)
     testCoroutineDispatchers.runCurrent()
 
@@ -946,6 +966,7 @@ class ClassroomListFragmentTest {
 
   @Test
   fun testFragment_scrollToBottom_classroomListCollapsesAndSticks_classroomListIsVisible() {
+    setUpTestApplicationComponent()
     scenario = ActivityScenario.launch(ClassroomListActivity::class.java)
     testCoroutineDispatchers.runCurrent()
 
@@ -964,6 +985,7 @@ class ClassroomListFragmentTest {
 
   @Test
   fun testFragment_switchClassroom_topicListUpdatesCorrectly() {
+    setUpTestApplicationComponent()
     scenario = ActivityScenario.launch(ClassroomListActivity::class.java)
     testCoroutineDispatchers.runCurrent()
 
@@ -998,6 +1020,7 @@ class ClassroomListFragmentTest {
 
   @Test
   fun testFragment_clickOnTopicCard_returnBack_classroomSelectionIsRetained() {
+    setUpTestApplicationComponent()
     scenario = ActivityScenario.launch(ClassroomListActivity::class.java)
     testCoroutineDispatchers.runCurrent()
 
@@ -1027,6 +1050,7 @@ class ClassroomListFragmentTest {
 
   @Test
   fun testFragment_switchClassrooms_topicListUpdatesCorrectly() {
+    setUpTestApplicationComponent()
     scenario = ActivityScenario.launch(ClassroomListActivity::class.java)
     profileTestHelper.logIntoAdmin()
     testCoroutineDispatchers.runCurrent()
@@ -1080,7 +1104,8 @@ class ClassroomListFragmentTest {
     logIntoAdmin()
   }
 
-  private fun setUpTestApplicationComponent() {
+  private fun setUpTestApplicationComponent(onboardingV2Enabled: Boolean = false) {
+    TestPlatformParameterModule.forceEnableOnboardingFlowV2(onboardingV2Enabled)
     ApplicationProvider.getApplicationContext<TestApplication>().inject(this)
     testCoroutineDispatchers.registerIdlingResource()
     profileTestHelper.initializeProfiles()
@@ -1133,7 +1158,7 @@ class ClassroomListFragmentTest {
       NumberWithUnitsRuleModule::class,
       NumericExpressionInputModule::class,
       NumericInputRuleModule::class,
-      PlatformParameterTestModule::class,
+      PlatformParameterSingletonModule::class,
       QuestionModule::class,
       RatioInputModule::class,
       RetrofitModule::class,
@@ -1145,15 +1170,14 @@ class ClassroomListFragmentTest {
       TestDispatcherModule::class,
       TestImageLoaderModule::class,
       TestLogReportingModule::class,
+      TestPlatformParameterModule::class,
       TestingBuildFlavorModule::class,
       TextInputRuleModule::class,
       ViewBindingShimModule::class,
       WorkManagerConfigurationModule::class
     ]
   )
-  interface TestApplicationComponent :
-    ApplicationComponent,
-    PlatformParameterInitializationInjector {
+  interface TestApplicationComponent : ApplicationComponent {
     @Component.Builder
     interface Builder : ApplicationComponent.Builder
 
@@ -1161,14 +1185,12 @@ class ClassroomListFragmentTest {
 
     fun getAppStartupStateController(): AppStartupStateController
 
+    fun getTestCoroutineDispatchers(): TestCoroutineDispatchers
+
     fun getProfileTestHelper(): ProfileTestHelper
   }
 
-  class TestApplication :
-    Application(),
-    ActivityComponentFactory,
-    ApplicationInjectorProvider,
-    PlatformParameterInitializationInjectorProvider {
+  class TestApplication : Application(), ActivityComponentFactory, ApplicationInjectorProvider {
     private val component: TestApplicationComponent by lazy {
       DaggerClassroomListFragmentTest_TestApplicationComponent.builder()
         .setApplication(this)
@@ -1188,7 +1210,5 @@ class ClassroomListFragmentTest {
     }
 
     override fun getApplicationInjector(): ApplicationInjector = component
-
-    override fun getPlatformParameterInitializationInjector() = component
   }
 }

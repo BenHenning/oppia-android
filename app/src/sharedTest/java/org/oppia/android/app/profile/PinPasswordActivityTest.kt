@@ -48,7 +48,6 @@ import org.oppia.android.app.classroom.ClassroomListActivity
 import org.oppia.android.app.devoptions.DeveloperOptionsModule
 import org.oppia.android.app.devoptions.DeveloperOptionsStarterModule
 import org.oppia.android.app.home.HomeActivity
-import org.oppia.android.app.model.FeatureFlagId.MULTIPLE_CLASSROOMS
 import org.oppia.android.app.model.ScreenName
 import org.oppia.android.app.player.state.itemviewmodel.SplitScreenInteractionModule
 import org.oppia.android.app.shim.ViewBindingShimModule
@@ -84,13 +83,9 @@ import org.oppia.android.domain.oppialogger.analytics.ApplicationLifecycleModule
 import org.oppia.android.domain.oppialogger.analytics.CpuPerformanceSnapshotterModule
 import org.oppia.android.domain.oppialogger.logscheduler.MetricLogSchedulerModule
 import org.oppia.android.domain.oppialogger.loguploader.LogReportWorkerModule
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjector
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterInitializationInjectorProvider
-import org.oppia.android.domain.platformparameter.testing.PlatformParameterTestModule
+import org.oppia.android.domain.platformparameter.PlatformParameterSingletonModule
 import org.oppia.android.domain.question.QuestionModule
 import org.oppia.android.domain.workmanager.WorkManagerConfigurationModule
-import org.oppia.android.testing.DisableFeatureFlag
-import org.oppia.android.testing.EnableFeatureFlag
 import org.oppia.android.testing.OppiaTestRule
 import org.oppia.android.testing.TestLogReportingModule
 import org.oppia.android.testing.espresso.EditTextInputAction
@@ -98,6 +93,7 @@ import org.oppia.android.testing.espresso.TextInputAction.Companion.hasErrorText
 import org.oppia.android.testing.espresso.TextInputAction.Companion.hasNoErrorText
 import org.oppia.android.testing.firebase.TestAuthenticationModule
 import org.oppia.android.testing.junit.InitializeDefaultLocaleRule
+import org.oppia.android.testing.platformparameter.TestPlatformParameterModule
 import org.oppia.android.testing.profile.ProfileTestHelper
 import org.oppia.android.testing.robolectric.RobolectricModule
 import org.oppia.android.testing.threading.TestCoroutineDispatchers
@@ -202,8 +198,8 @@ class PinPasswordActivityTest {
   }
 
   @Test
-  @DisableFeatureFlag(MULTIPLE_CLASSROOMS)
   fun testPinPassword_withAdmin_inputCorrectPin_opensHomeActivity() {
+    TestPlatformParameterModule.forceEnableMultipleClassrooms(false)
     launch<PinPasswordActivity>(
       PinPasswordActivity.createPinPasswordActivityIntent(
         context = context,
@@ -220,8 +216,8 @@ class PinPasswordActivityTest {
   }
 
   @Test
-  @EnableFeatureFlag(MULTIPLE_CLASSROOMS)
   fun testPinPassword_enableClassrooms_withAdmin_inputCorrectPin_opensClassroomListActivity() {
+    TestPlatformParameterModule.forceEnableMultipleClassrooms(true)
     launch<PinPasswordActivity>(
       PinPasswordActivity.createPinPasswordActivityIntent(
         context = context,
@@ -239,8 +235,8 @@ class PinPasswordActivityTest {
   }
 
   @Test
-  @DisableFeatureFlag(MULTIPLE_CLASSROOMS)
   fun testPinPassword_withUser_inputCorrectPin_opensHomeActivity() {
+    TestPlatformParameterModule.forceEnableMultipleClassrooms(false)
     launch<PinPasswordActivity>(
       PinPasswordActivity.createPinPasswordActivityIntent(
         context = context,
@@ -257,8 +253,8 @@ class PinPasswordActivityTest {
   }
 
   @Test
-  @EnableFeatureFlag(MULTIPLE_CLASSROOMS)
   fun testPinPassword_enableClassrooms_withUser_inputCorrectPin_opensClassroomListActivity() {
+    TestPlatformParameterModule.forceEnableMultipleClassrooms(true)
     launch<PinPasswordActivity>(
       PinPasswordActivity.createPinPasswordActivityIntent(
         context = context,
@@ -530,8 +526,8 @@ class PinPasswordActivityTest {
   }
 
   @Test
-  @DisableFeatureFlag(MULTIPLE_CLASSROOMS)
   fun testPinPassword_withUser_forgot_inputAdminPinAndNewPin_opensHomeActivity() {
+    TestPlatformParameterModule.forceEnableMultipleClassrooms(false)
     launch<PinPasswordActivity>(
       PinPasswordActivity.createPinPasswordActivityIntent(
         context = context,
@@ -1289,8 +1285,8 @@ class PinPasswordActivityTest {
   }
 
   @Test
-  @DisableFeatureFlag(MULTIPLE_CLASSROOMS)
   fun testActivity_multipleClassroomsDisabled_adminUser_inputPin_changeConfig_opensHomeActivity() {
+    TestPlatformParameterModule.forceEnableMultipleClassrooms(false)
     launch<PinPasswordActivity>(
       PinPasswordActivity.createPinPasswordActivityIntent(
         context = context,
@@ -1310,8 +1306,8 @@ class PinPasswordActivityTest {
   }
 
   @Test
-  @EnableFeatureFlag(MULTIPLE_CLASSROOMS)
   fun testActivity_enablesClassroom_adminUser_inputPin_changeConfig_opensClassroomListActivity() {
+    TestPlatformParameterModule.forceEnableMultipleClassrooms(true)
     launch<PinPasswordActivity>(
       PinPasswordActivity.createPinPasswordActivityIntent(
         context = context,
@@ -1331,8 +1327,8 @@ class PinPasswordActivityTest {
   }
 
   @Test
-  @DisableFeatureFlag(MULTIPLE_CLASSROOMS)
   fun testActivity_disableMultipleClassroom_nonAdminUser_inputPin_changeConfig_opensHomeActivity() {
+    TestPlatformParameterModule.forceEnableMultipleClassrooms(false)
     launch<PinPasswordActivity>(
       PinPasswordActivity.createPinPasswordActivityIntent(
         context = context,
@@ -1352,8 +1348,8 @@ class PinPasswordActivityTest {
   }
 
   @Test
-  @EnableFeatureFlag(MULTIPLE_CLASSROOMS)
   fun testActivity_enableClassroom_nonAdminUser_inputPin_changeConfig_opensClassroomListActivity() {
+    TestPlatformParameterModule.forceEnableMultipleClassrooms(true)
     launch<PinPasswordActivity>(
       PinPasswordActivity.createPinPasswordActivityIntent(
         context = context,
@@ -1424,7 +1420,7 @@ class PinPasswordActivityTest {
       NumberWithUnitsRuleModule::class,
       NumericExpressionInputModule::class,
       NumericInputRuleModule::class,
-      PlatformParameterTestModule::class,
+      PlatformParameterSingletonModule::class,
       QuestionModule::class,
       RatioInputModule::class,
       RetrofitModule::class,
@@ -1435,15 +1431,14 @@ class PinPasswordActivityTest {
       TestAuthenticationModule::class,
       TestDispatcherModule::class,
       TestLogReportingModule::class,
+      TestPlatformParameterModule::class,
       TestingBuildFlavorModule::class,
       TextInputRuleModule::class,
       ViewBindingShimModule::class,
       WorkManagerConfigurationModule::class
     ]
   )
-  interface TestApplicationComponent :
-    ApplicationComponent,
-    PlatformParameterInitializationInjector {
+  interface TestApplicationComponent : ApplicationComponent {
     @Component.Builder
     interface Builder : ApplicationComponent.Builder {
       override fun build(): TestApplicationComponent
@@ -1452,11 +1447,7 @@ class PinPasswordActivityTest {
     fun inject(pinPasswordActivityTest: PinPasswordActivityTest)
   }
 
-  class TestApplication :
-    Application(),
-    ActivityComponentFactory,
-    ApplicationInjectorProvider,
-    PlatformParameterInitializationInjectorProvider {
+  class TestApplication : Application(), ActivityComponentFactory, ApplicationInjectorProvider {
     private val component: TestApplicationComponent by lazy {
       DaggerPinPasswordActivityTest_TestApplicationComponent.builder()
         .setApplication(this)
@@ -1472,7 +1463,5 @@ class PinPasswordActivityTest {
     }
 
     override fun getApplicationInjector(): ApplicationInjector = component
-
-    override fun getPlatformParameterInitializationInjector() = component
   }
 }

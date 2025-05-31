@@ -13,7 +13,6 @@ import org.mockito.Mockito.verify
 import org.mockito.Mockito.verifyNoMoreInteractions
 import org.mockito.junit.MockitoJUnit
 import org.mockito.junit.MockitoRule
-import org.oppia.android.testing.OppiaTestRule
 import org.oppia.android.testing.assertThrows
 import org.oppia.android.util.math.PeekableIterator.Companion.toPeekableIterator
 import org.robolectric.annotation.LooperMode
@@ -25,9 +24,6 @@ import java.util.function.Supplier
 @RunWith(AndroidJUnit4::class)
 @LooperMode(LooperMode.Mode.PAUSED)
 class PeekableIteratorTest {
-  @get:Rule
-  val oppiaTestRule = OppiaTestRule()
-
   @Rule
   @JvmField
   val mockitoRule: MockitoRule = MockitoJUnit.rule()
