@@ -9,6 +9,7 @@ on:
 
 permissions:
   pull-requests: write
+  contents: write
 
 jobs:
   validate-pr:
@@ -25,7 +26,7 @@ jobs:
             core.setOutput('issue_numbers_list_json', JSON.stringify(issueNumbers));
             core.info(`PR #${context.payload.pull_request.number} is marked as fixing or partially fixing issue(s): ${JSON.stringify(issueNumbers)}`);
             if (issueNumbers.length === 0) {
-              core.setOutput('failure_message', "the PR description must contain 'Fixes #<issue>' or 'Fix part of #<issue>' for each issue the PR is changing, and each one on its own line with no other text.");
+              core.setOutput('failure_message', "the PR description must contain 'Fixes #<issue>' or 'Fixes part of #<issue>' for each issue the PR is changing, and each one on its own line with no other text");
             }
 
       - name: Find issue assignment(s)
@@ -46,7 +47,7 @@ jobs:
               (await Promise.all(issuePromises))
                 .filter((result) => !result.isValid || !result.assignees.includes(author))
                 .map((result) => result.issueNumber);
-            core.info(`The following issues are being referenced in PR #${context.payload.pull_request.number} but are not assigned to the PR author (${author}): ${JSON.stringify(invalidAuthorshipIssueNumbers)}.`);
+            core.info(`The following issues are being referenced in PR #${context.payload.pull_request.number} but are not assigned to the PR author (${author}): ${JSON.stringify(invalidAuthorshipIssueNumbers)}`);
             if (invalidAuthorshipIssueNumbers.length !== 0) {
               const issueRefs = invalidAuthorshipIssueNumbers.map((issueNumber) => `#${issueNumber}`).join(", ");
               const issueRefLine = invalidAuthorshipIssueNumbers.length == 1 ? `issue ${issueRefs} (or it does not exist)` : `issues ${issueRefs} (or they do not exist)`;
