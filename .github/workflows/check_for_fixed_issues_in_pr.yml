@@ -31,7 +31,7 @@ jobs:
               const issueRefs = invalidIssueNumbers.map((issueNumber) => `#${issueNumber}`).join(', ');
               core.setOutput('failure_message', `the PR description should not use 'Fix #<issue>' or 'Fix part of #<issue>' syntax. Instead use 'Fixes' and 'Fixes part of', per referenced issue(s): ${issueRefs}`);
             } else if (issueNumbers.length === 0) {
-              core.setOutput('failure_message', 'the PR description must contain 'Fixes #<issue>' or 'Fixes part of #<issue>' for each issue the PR is changing, and each one on its own line with no other text');
+              core.setOutput('failure_message', "the PR description must contain 'Fixes #<issue>' or 'Fixes part of #<issue>' for each issue the PR is changing, and each one on its own line with no other text");
             }
 
       - name: Find issue assignment(s)
