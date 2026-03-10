@@ -21,12 +21,17 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const regex = /^Fixes(?: part of)? #(\d+)$/gm;
-            const issueNumbers = [... (context.payload.pull_request.body || '').matchAll(regex)].map((match) => match[1]);
+            const incorrectFormatRegex = /^Fix(?: part of)? #(\d+)$/gm;
+            const correctFormatRegex = /^Fixes(?: part of)? #(\d+)$/gm;
+            const invalidIssueNumbers = [... (context.payload.pull_request.body || '').matchAll(incorrectFormatRegex)].map((match) => match[1]);
+            const issueNumbers = [... (context.payload.pull_request.body || '').matchAll(correctFormatRegex)].map((match) => match[1]);
             core.setOutput('issue_numbers_list_json', JSON.stringify(issueNumbers));
-            core.info(`PR #${context.payload.pull_request.number} is marked as fixing or partially fixing issue(s): ${JSON.stringify(issueNumbers)}`);
-            if (issueNumbers.length === 0) {
-              core.setOutput('failure_message', "the PR description must contain 'Fixes #<issue>' or 'Fixes part of #<issue>' for each issue the PR is changing, and each one on its own line with no other text");
+            core.info(`PR #${context.payload.pull_request.number} is marked as fixing or partially fixing issue(s): ${JSON.stringify(issueNumbers)}. It also has invalid reference(s): ${JSON.stringify(invalidIssueNumbers)}.`);
+            if (invalidIssueNumbers.length === 0) {
+              const issueRefs = invalidIssueNumbers.map((issueNumber) => `#${issueNumber}`).join(', ');
+              core.setOutput('failure_message', `the PR description should not use 'Fix #<issue>' or 'Fix part of #<issue>' syntax. Instead use 'Fixes' and 'Fixes part of', per referenced issue(s): ${issueRefs}`);
+            } else if (issueNumbers.length === 0) {
+              core.setOutput('failure_message', 'the PR description must contain 'Fixes #<issue>' or 'Fixes part of #<issue>' for each issue the PR is changing, and each one on its own line with no other text');
             }
 
       - name: Find issue assignment(s)
@@ -47,11 +52,11 @@ jobs:
               (await Promise.all(issuePromises))
                 .filter((result) => !result.isValid || !result.assignees.includes(author))
                 .map((result) => result.issueNumber);
-            core.info(`The following issues are being referenced in PR #${context.payload.pull_request.number} but are not assigned to the PR author (${author}): ${JSON.stringify(invalidAuthorshipIssueNumbers)}`);
+            core.info(`The following issues are being referenced in PR #${context.payload.pull_request.number} but are not assigned to the PR author (${author}): ${JSON.stringify(invalidAuthorshipIssueNumbers)}.`);
             if (invalidAuthorshipIssueNumbers.length !== 0) {
-              const issueRefs = invalidAuthorshipIssueNumbers.map((issueNumber) => `#${issueNumber}`).join(", ");
+              const issueRefs = invalidAuthorshipIssueNumbers.map((issueNumber) => `#${issueNumber}`).join(', ');
               const issueRefLine = invalidAuthorshipIssueNumbers.length == 1 ? `issue ${issueRefs} (or it does not exist)` : `issues ${issueRefs} (or they do not exist)`;
-              core.setOutput('failure_message', `you are not assigned to referenced ${issueRefLine}. You may only fix issues you are assigned to.`);
+              core.setOutput('failure_message', `you are not assigned to referenced ${issueRefLine}. You may only fix issues that you are assigned to to help avoid multiple team members duplicating work on the same issue`);
             }
 
       - name: Move PR to draft and add comment
