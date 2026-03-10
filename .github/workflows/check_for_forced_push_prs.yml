@@ -1,0 +1,31 @@
+# Jobs for detecting and closing PRs with permanently changed commit histories, including for forks.
+
+name: Close Force-Pushed PRs
+
+on:
+  pull_request_target:
+    types: [synchronize]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  check-force-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Detect and close
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { before, after, pull_request: pr, repo: repoContext } = context.payload;
+            const { owner, repo } = repoContext;
+            // One of: 'diverged' (rebased, amended, or squashed), 'behind' (dropped commits), or 'ahead' (standard fast-forward).
+            const status = await github.rest.repos.compareCommits({ owner, repo, base: before, head: after }).data.status;
+            if (status === 'diverged' || status === 'behind') {
+              console.log(`Force push detected (history has been altered). Commit history status: ${status}`);
+              const closeMessage = "Closing PR: Force pushing is not allowed in this repository. This PR has been automatically closed. Please create a new PR with a clean commit history and manually copy over any unresolved reviewer comment threads from this PR."
+              await github.rest.issues.createComment({ owner, repo, issue_number: pr.number, body: closeMessage });
+              await github.rest.pulls.update({owner, repo, pull_number: pr.number, state: 'closed' });
+            } else {
+              console.log(`Standard push detected. Commit history status: ${status}. No action taken.`);
+            }
