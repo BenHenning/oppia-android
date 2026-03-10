@@ -27,7 +27,7 @@ jobs:
             const issueNumbers = [... (context.payload.pull_request.body || '').matchAll(correctFormatRegex)].map((match) => match[1]);
             core.setOutput('issue_numbers_list_json', JSON.stringify(issueNumbers));
             core.info(`PR #${context.payload.pull_request.number} is marked as fixing or partially fixing issue(s): ${JSON.stringify(issueNumbers)}. It also has invalid reference(s): ${JSON.stringify(invalidIssueNumbers)}.`);
-            if (invalidIssueNumbers.length === 0) {
+            if (invalidIssueNumbers.length !== 0) {
               const issueRefs = invalidIssueNumbers.map((issueNumber) => `#${issueNumber}`).join(', ');
               core.setOutput('failure_message', `the PR description should not use 'Fix #<issue>' or 'Fix part of #<issue>' syntax. Instead use 'Fixes' and 'Fixes part of', per referenced issue(s): ${issueRefs}`);
             } else if (issueNumbers.length === 0) {
