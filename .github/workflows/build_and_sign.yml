@@ -96,7 +96,13 @@ jobs:
       - name: Write prod server key
         run: echo "${{ secrets.PROD_SERVER_KEY }}" > /tmp/prod_server.key
 
-      - name: Build unsigned AAB
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools
+
+      # Step 1: compile everything into the Bazel disk cache. This is the memory-intensive phase.
+      # Splitting into two steps with a bazel shutdown between them avoids JVM OOM on the runner,
+      # following the same pattern used in regular binary build CI runs.
+      - name: Build unsigned AAB (compile)
         run: |
           FLAVOR="${{ github.event.inputs.flavor }}"
           # Alpha builds include pre-release lessons so they need alpha assets; all other
@@ -110,7 +116,29 @@ jobs:
             --//config:firebase_project_id=${{ secrets.FIREBASE_PROJECT_ID }} \
             --//config:firebase_app_id=${{ secrets.FIREBASE_APP_ID }} \
             --//config:download_license_texts=true \
-            --//config:enable_firebase_analytics=true
+            --//config:enable_firebase_analytics=true \
+            --action_env=GOOGLE_APPLICATION_CREDENTIALS
+
+      # Shut down the Bazel JVM to free accumulated heap memory before the final link/package phase.
+      - name: Shutdown Bazel to free memory
+        run: bazel shutdown
+
+      # Step 2: re-run the same build. All compilation is cached on disk; Bazel only needs to
+      # link and package the final AAB — much lower peak memory usage.
+      - name: Build unsigned AAB (finish)
+        run: |
+          FLAVOR="${{ github.event.inputs.flavor }}"
+          ASSETS_TYPE=$([ "$FLAVOR" = "alpha" ] && echo "alpha" || echo "prod")
+          bazel build --compilation_mode=opt \
+            //:oppia_${FLAVOR} \
+            --//config:assets_type=${ASSETS_TYPE} \
+            --//config:web_api_key_file=/tmp/prod_server.key \
+            --//config:download_firebase_config=true \
+            --//config:firebase_project_id=${{ secrets.FIREBASE_PROJECT_ID }} \
+            --//config:firebase_app_id=${{ secrets.FIREBASE_APP_ID }} \
+            --//config:download_license_texts=true \
+            --//config:enable_firebase_analytics=true \
+            --action_env=GOOGLE_APPLICATION_CREDENTIALS
 
       # The Bazel rule renames (but does not sign) the AAB to:
       # oppia-android-{MAJOR}.{MINOR}-rc{RC}-{flavor}-{hash10}.aab
@@ -118,9 +146,11 @@ jobs:
       - name: Locate unsigned AAB
         run: |
           FLAVOR="${{ github.event.inputs.flavor }}"
-          # Use workspace-relative bazel-bin symlink — 'find bazel-bin' can fail in CI
-          # because bazel-bin is a symlink that may not resolve in a separate step.
-          UNSIGNED_AAB_PATH=$(ls bazel-bin/oppia_${FLAVOR}_release/oppia-android-*.aab 2>/dev/null | head -1)
+          # Resolve bazel-bin to its real absolute path NOW, before 'bazel run' in the
+          # signing step starts a new server and shifts the bazel-bin symlink to the
+          # host/JVM output directory (which would make the Android AAB invisible).
+          BAZEL_BIN_REAL=$(readlink -f bazel-bin)
+          UNSIGNED_AAB_PATH=$(ls "$BAZEL_BIN_REAL"/oppia_${FLAVOR}_release/oppia-android-*.aab 2>/dev/null | head -1)
           if [[ -z "$UNSIGNED_AAB_PATH" ]]; then
             echo "::error::Unsigned AAB not found in bazel-bin/oppia_${FLAVOR}_release/. Build may have failed."
             exit 1
@@ -137,13 +167,19 @@ jobs:
 
       # Signs the unsigned AAB using Cloud KMS HSM. The private key never leaves the HSM —
       # only the digest is sent to KMS and the signature returned via the jsign JCA provider.
-      # GCP_ACCESS_TOKEN (set above) is read by sign_release_binary at runtime.
+      # GCP_ACCESS_TOKEN is read by sign_release_binary at runtime via the jsign JCA provider.
+      # --action_env ensures both credential env vars are passed into the Bazel sandbox so the
+      # signing tool can authenticate to Cloud KMS (Bazel strips env vars by default).
       - name: Sign AAB with Cloud KMS
         env:
           GCP_ACCESS_TOKEN: ${{ env.GCP_ACCESS_TOKEN }}
         run: |
-          bazel run //scripts:sign_release_binary -- \
-            "${{ github.workspace }}/$UNSIGNED_AAB_PATH" \
+          # UNSIGNED_AAB_PATH is already an absolute real path (resolved in Locate step).
+          bazel run //scripts:sign_release_binary \
+            --action_env=GOOGLE_APPLICATION_CREDENTIALS \
+            --action_env=GCP_ACCESS_TOKEN \
+            -- \
+            "$UNSIGNED_AAB_PATH" \
             "${{ secrets.KMS_KEY_RESOURCE_NAME }}" \
             "${{ github.workspace }}/config/certificate/upload_certificate.pem" \
             "$SIGNED_AAB_PATH"
