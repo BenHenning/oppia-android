@@ -114,7 +114,7 @@ jobs:
           else
             echo "GOOGLE_APPLICATION_CREDENTIALS is set to some string"
           fi
-          bazel build --compilation_mode=opt \
+          bazel build --compilation_mode=opt --verbose_failures \
             //:oppia_${FLAVOR} \
             --//config:assets_type=${ASSETS_TYPE} \
             --//config:web_api_key_file=/tmp/prod_server.key \
