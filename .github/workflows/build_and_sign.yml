@@ -108,6 +108,12 @@ jobs:
           # Alpha builds include pre-release lessons so they need alpha assets; all other
           # flavors (beta, ga) ship to production and use prod assets.
           ASSETS_TYPE=$([ "$FLAVOR" = "alpha" ] && echo "alpha" || echo "prod")
+          echo "GOOGLE_APPLICATION_CREDENTIALS: \"$GOOGLE_APPLICATION_CREDENTIALS\""
+          if [ -z "${GOOGLE_APPLICATION_CREDENTIALS}" ]; then
+            echo "GOOGLE_APPLICATION_CREDENTIALS is unset or set to the empty string"
+          else
+            echo "GOOGLE_APPLICATION_CREDENTIALS is set to some string"
+          fi
           bazel build --compilation_mode=opt \
             //:oppia_${FLAVOR} \
             --//config:assets_type=${ASSETS_TYPE} \
