@@ -30,6 +30,7 @@ def _download_google_services_json_impl(ctx):
         return DefaultInfo(files = depset([output_file]))
 
     command = """
+    echo "GOOGLE_APPLICATION_CREDENTIALS value: $GOOGLE_APPLICATION_CREDENTIALS"
     firebase apps:sdkconfig ANDROID "{app_id}" --project "{project_id}" --out "{output_file}" --non-interactive || exit 255
     """.format(
         app_id = app_id,
