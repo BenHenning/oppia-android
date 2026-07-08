@@ -64,6 +64,10 @@ jobs:
 
           echo "Input validation passed: flavor=$FLAVOR, source_ref=$SOURCE_REF"
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.18.0'
+
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           persist-credentials: false
