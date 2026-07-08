@@ -106,7 +106,7 @@ jobs:
 
       - name: Try pre-running Firebase
         run: |
-          firebase apps:sdkconfig ANDROID "${{ secrets.FIREBASE_APP_ID }}" --project "${{ secrets.FIREBASE_PROJECT_ID }}" --out "./test-google-services.json" --non-interactive
+          firebase apps:sdkconfig ANDROID "${{ secrets.FIREBASE_APP_ID }}" --project "${{ secrets.FIREBASE_PROJECT_ID }}" --out "./test-google-services.json" --non-interactive || cat firebase-debug.log
 
       # Step 1: compile everything into the Bazel disk cache. This is the memory-intensive phase.
       # Splitting into two steps with a bazel shutdown between them avoids JVM OOM on the runner,
