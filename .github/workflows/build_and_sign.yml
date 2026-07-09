@@ -104,6 +104,24 @@ jobs:
       - name: Install Firebase CLI
         run: npm install -g firebase-tools
 
+      - name: Fetch Firebase Config via CURL
+        env:
+          GCP_ACCESS_TOKEN: ${{ env.GCP_ACCESS_TOKEN }}
+        run: |
+          echo "Testing direct API access..."
+          HTTP_STATUS=$(curl -s -o /tmp/firebase_response.json -w "%{http_code}" \
+            -H "Authorization: Bearer $GCP_ACCESS_TOKEN" \
+            "https://firebase.googleapis.com/v1beta1/projects/-/androidApps/${{ secrets.FIREBASE_APP_ID }}/config")
+          
+          echo "HTTP Status: $HTTP_STATUS"
+          wc /tmp/firebase_response.json
+          sha256sum /tmp/firebase_response.json
+          
+          if [ "$HTTP_STATUS" -ne 200 ]; then
+            echo "::error::API rejected the Service Account."
+            exit 1
+          fi
+
       - name: Try pre-running Firebase
         run: |
           firebase apps:sdkconfig ANDROID "${{ secrets.FIREBASE_APP_ID }}" --project "${{ secrets.FIREBASE_PROJECT_ID }}" --out "./test-google-services.json" --non-interactive || { cat firebase-debug.log; exit 1; }
