@@ -104,6 +104,14 @@ jobs:
       - name: Install Firebase CLI
         run: npm install -g firebase-tools
 
+      - name: Decode Access Token
+        env:
+          GCP_ACCESS_TOKEN: ${{ env.GCP_ACCESS_TOKEN }}
+        run: |
+          echo "Decoding token..."
+          curl -s "https://oauth2.googleapis.com/tokeninfo?access_token=$GCP_ACCESS_TOKEN" > /tmp/token_info.json
+          cat /tmp/token_info.json
+
       - name: Fetch Firebase Config via CURL
         env:
           GCP_ACCESS_TOKEN: ${{ env.GCP_ACCESS_TOKEN }}
