@@ -19,7 +19,7 @@
   <string name="audio_language_select_dialog_okay_button" tools:ignore="ButtonCase,Typos">Ok</string>
   <string name="audio_language_select_dialog_cancel_button">Cancel</string>
   <string name="audio_language_select_dialog_title">Audio Language</string>
-  <string name="audio_dialog_offline_title">Currently Offline</string>
+  <string name="audio_dialog_offline_title">Currently Offline.</string>
   <string name="audio_dialog_offline_message">Make sure Wi-Fi or cellular data is turned on, then try again.</string>
   <string name="audio_dialog_offline_positive" tools:ignore="ButtonCase,Typos">Ok</string>
   <string name="cellular_data_alert_dialog_okay_button" tools:ignore="ButtonCase,Typos">Ok</string>
@@ -405,7 +405,7 @@
   <string name="learner_analytics_label_text">Learner Study Analytics</string>
   <!-- AdministratorControlsFragment -->
   <string name="administrator_controls_general_label">General</string>
-  <string name="administrator_controls_edit_account">Edit account</string>
+  <string name="administrator_controls_edit_account">Edit account -- Making a bunch of other random changes to this string so that the build is a bit larger for build stats analysis.</string>
   <string name="administrator_controls_profile_management_label">Profile Management</string>
   <string name="administrator_controls_edit_profiles">Edit profiles</string>
   <string name="administrator_controls_download_permissions_label">Download Permissions</string>
